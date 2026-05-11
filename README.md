@@ -178,7 +178,7 @@ This enables the model to learn disease recognition, symptom interpretation, con
 
 ## Generation Pipeline
 
-![Instruction Generation Pipeline](images/Slide1.jpg)
+![Instruction Generation Pipeline](Slide1.jpg)
 
 The pipeline consists of **three stages**.
 
