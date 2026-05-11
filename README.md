@@ -130,6 +130,12 @@ banana_images
 
 The groundnut disease images are similarly derived from a crop disease image dataset.
 
+## Dataset Download
+
+GroundnutVLM dataset can be downloaded from the following link:
+
+https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing
+
 Download and extract inside `GroundnutVLM/`. Expected structure:
 
 ```
