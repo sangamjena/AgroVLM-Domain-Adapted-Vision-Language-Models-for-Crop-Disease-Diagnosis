@@ -677,7 +677,218 @@ These results confirm that BananaVLM not only improves classification accuracy b
 
 ## GroundnutVLM Results
 
-Results for GroundnutVLM will be reported here upon completion of evaluation.
+
+GroundnutVLM is evaluated on the same two-split framework as BananaVLM — an in-domain test set drawn from the training distribution and a fully separate out-of-domain dataset sourced from Kaggle — to measure both specialization depth and real-world generalizability.
+
+Two tasks are evaluated in both settings:
+
+- **Identification** — Binary prediction: Healthy vs. Diseased
+- **Classification** — Fine-grained prediction across disease classes
+
+---
+
+### Dataset Statistics
+
+#### In-Domain Test Set (849 images, 5 classes)
+
+| Class                  | Images |
+| ---------------------- | ------ |
+| Early Leaf Spot        | 122    |
+| Late Leaf Spot         | 199    |
+| Nutritional Deficiency | 167    |
+| Rust                   | 320    |
+| Healthy                | 41     |
+| **Total**              | **849** |
+
+#### Out-of-Domain Test Set (1000 images, 5 classes)
+
+Source: [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
+
+| Class                  | Images |
+| ---------------------- | ------ |
+| Early Leaf Spot        | 168    |
+| Late Leaf Spot         | 165    |
+| Nutritional Deficiency | 167    |
+| Rust                   | 332    |
+| Healthy                | 168    |
+| **Total**              | **1,000** |
+
+---
+
+### 1. Epoch-wise Performance
+
+GroundnutVLM was evaluated at three training checkpoints across both domain settings simultaneously.
+
+| Epoch   | ID Accuracy — In-Domain | ID Correct/Total | ID Accuracy — OOD | ID Correct/Total | Cls Accuracy — In-Domain | Cls Correct/Total | Cls Accuracy — OOD | Cls Correct/Total |
+| ------- | :---------------------: | :--------------: | :---------------: | :--------------: | :----------------------: | :---------------: | :----------------: | :---------------: |
+| Epoch 3 | 96.70%                  | 821 / 849        | 96.90%            | 969 / 1000       | 97.90%                   | 791 / 808         | 99.04%             | 824 / 832         |
+| Epoch 5 | 98.94%                  | 840 / 849        | 97.00%            | 970 / 1000       | 98.27%                   | 794 / 808         | 98.32%             | 818 / 832         |
+| Epoch 7 | **99.18%**              | 842 / 849        | **97.10%**        | 971 / 1000       | **98.27%**               | 794 / 808         | **99.40%**         | 827 / 832         |
+
+GroundnutVLM achieves remarkably high accuracy from very early in training — Epoch 3 already yields above 96% identification and above 97% classification on both domain splits. This rapid convergence reflects strong alignment between the GroundnutInstruct instruction dataset and the visual characteristics of the disease classes. By Epoch 7, classification accuracy reaches **99.40% out-of-domain**, indicating exceptional generalization.
+
+---
+
+### 2. In-Domain Results
+
+#### 2.1 Per-Class Classification Report (Epoch 7)
+
+| Class                  | Precision | Recall | F1-Score | Support |
+| ---------------------- | :-------: | :----: | :------: | :-----: |
+| Early Leaf Spot        | 0.95      | 0.98   | 0.97     | 122     |
+| Late Leaf Spot         | 0.99      | 0.97   | 0.98     | 199     |
+| Nutritional Deficiency | 1.00      | 0.91   | 0.95     | 167     |
+| Rust                   | 1.00      | 0.96   | 0.98     | 320     |
+
+| Metric             | Value  |
+| ------------------ | :----: |
+| Accuracy           | 98.27% |
+| Weighted Precision | 0.99   |
+| Weighted Recall    | 0.95   |
+| Weighted F1-Score  | 0.97   |
+
+All four disease classes achieve F1-scores of 0.95 or above. Nutritional Deficiency has the lowest recall (0.91), which may reflect visual ambiguity between mild deficiency symptoms and early-stage disease lesions. Rust and Late Leaf Spot achieve the strongest per-class performance (F1: 0.98), consistent with their distinctive visual patterns and higher representation in the training set.
+
+#### 2.2 Open-Source VLM Comparison (In-Domain)
+
+| Model                | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
+| -------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
+| LLaVA-7B             | 40.75              | 346 / 849     | 4.59               | 39 / 849      |
+| LLaVA-13B            | 18.73              | 159 / 849     | 8.01               | 68 / 849      |
+| LLaVA-34B            | 80.33              | 682 / 849     | 14.02              | 119 / 849     |
+| Qwen2.5-VL-7B        | 83.75              | 711 / 849     | 1.77               | 15 / 849      |
+| Qwen3-VL-8B          | 95.05              | 807 / 849     | 34.16              | 290 / 849     |
+| Qwen3-VL-32B         | 95.41              | 810 / 849     | 28.27              | 240 / 849     |
+| Granite3.2-Vision    | 9.31               | 79 / 849      | 10.37              | 88 / 849      |
+| Gemma3-4B            | 96.00              | 815 / 849     | 32.63              | 277 / 849     |
+| Gemma3-12B           | 97.06              | 824 / 849     | 42.29              | 359 / 849     |
+| LLaVA-Phi3-3.8B      | 16.02              | 136 / 849     | 6.12               | 52 / 849      |
+| MiniCPM-V            | 35.81              | 304 / 849     | 28.74              | 244 / 849     |
+| Qwen2.5-VL-72B       | 90.58              | 769 / 849     | 3.53               | 30 / 849      |
+| BakLLaVA             | 21.55              | 183 / 849     | 1.65               | 14 / 849      |
+| **GroundnutVLM (Ours)** | **99.18**       | **842 / 849** | **98.27**          | **794 / 808** |
+
+#### 2.3 Closed-Source VLM Comparison (In-Domain)
+
+| Model                  | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
+| ---------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
+| Gemini 2.5 Pro         | 99.18              | 842 / 849     | 24.38              | 197 / 808     |
+| Gemini 2.5 Flash       | 98.94              | 840 / 849     | 11.26              | 91 / 808      |
+| Gemini 3 Flash Preview | 98.35              | 835 / 849     | 17.95              | 145 / 808     |
+| Gemini 3.1 Flash Lite  | 97.76              | 830 / 849     | 24.38              | 197 / 808     |
+| Gemini 2.5 Flash Lite  | 96.70              | 821 / 849     | 4.95               | 40 / 808      |
+| **GroundnutVLM (Ours)**| **99.18**          | **842 / 849** | **98.27**          | **794 / 808** |
+
+On the in-domain benchmark, GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identification (both 99.18%) while achieving **4× higher classification accuracy** — 98.27% vs. 24.38%. Against the best open-source model on classification (Gemma3-12B at 42.29%), GroundnutVLM exceeds it by more than 55 percentage points.
+
+---
+
+### 3. Out-of-Domain Results
+
+#### 3.1 Per-Class Classification Report — Out-of-Domain (Epoch 7)
+
+| Class                  | Precision | Recall | F1-Score | Support |
+| ---------------------- | :-------: | :----: | :------: | :-----: |
+| Early Leaf Spot        | 1.0000    | 1.0000 | 1.0000   | 168     |
+| Late Leaf Spot         | 1.0000    | 1.0000 | 1.0000   | 165     |
+| Nutritional Deficiency | 1.0000    | 0.9701 | 0.9848   | 167     |
+| Rust                   | 1.0000    | 0.9759 | 0.9878   | 332     |
+
+| Metric             | Value  |
+| ------------------ | :----: |
+| Accuracy           | 99.40% |
+| Weighted Precision | 1.0000 |
+| Weighted Recall    | 0.9844 |
+| Weighted F1-Score  | 0.9921 |
+
+The out-of-domain classification report is exceptional. Early Leaf Spot and Late Leaf Spot achieve **perfect precision, recall, and F1 (1.0)** on an entirely unseen dataset. Nutritional Deficiency and Rust both achieve F1-scores above 0.98. Weighted precision is perfect (1.0000), meaning every positive prediction made by the model is correct — there are zero false positives across the entire out-of-domain test set.
+
+#### 3.2 Open-Source VLM Comparison (Out-of-Domain)
+
+| Model                | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
+| -------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
+| LLaVA-7B             | 42.90              | 429 / 1000    | 5.30               | 53 / 1000     |
+| LLaVA-13B            | 25.90              | 259 / 1000    | 8.40               | 84 / 1000     |
+| LLaVA-34B            | 72.20              | 722 / 1000    | 12.20              | 122 / 1000    |
+| Qwen2.5-VL-7B        | 80.70              | 807 / 1000    | 1.60               | 16 / 1000     |
+| Qwen3-VL-8B          | 92.80              | 928 / 1000    | 35.40              | 354 / 1000    |
+| Qwen3-VL-32B         | 93.00              | 930 / 1000    | 27.90              | 279 / 1000    |
+| Granite3.2-Vision    | 16.70              | 167 / 1000    | 7.70               | 77 / 1000     |
+| Gemma3-4B            | 84.70              | 847 / 1000    | 31.60              | 316 / 1000    |
+| Gemma3-12B           | 93.30              | 933 / 1000    | 44.20              | 442 / 1000    |
+| LLaVA-Phi3-3.8B      | 20.80              | 208 / 1000    | 6.80               | 68 / 1000     |
+| MiniCPM-V            | 35.70              | 357 / 1000    | 25.40              | 254 / 1000    |
+| Qwen2.5-VL-72B       | 87.20              | 872 / 1000    | 2.40               | 24 / 1000     |
+| BakLLaVA             | 26.30              | 263 / 1000    | 2.00               | 20 / 1000     |
+| **GroundnutVLM (Ours)** | **97.10**       | **971 / 1000**| **99.40%**         | **827 / 832** |
+
+#### 3.3 Closed-Source VLM Comparison (Out-of-Domain)
+
+| Model                  | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
+| ---------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
+| Gemini 2.5 Pro         | 97.10              | 971 / 1000    | 41.60              | 416 / 1000    |
+| Gemini 2.5 Flash       | 97.00              | 970 / 1000    | 24.80              | 248 / 1000    |
+| Gemini 3 Flash Preview | 96.90              | 969 / 1000    | 26.40              | 264 / 1000    |
+| Gemini 3.1 Flash Lite  | 96.80              | 968 / 1000    | 23.40              | 234 / 1000    |
+| Gemini 2.5 Flash Lite  | 96.70              | 967 / 1000    | 12.10              | 121 / 1000    |
+| **GroundnutVLM (Ours)**| **97.10**          | **971 / 1000**| **99.40%**         | **827 / 832** |
+
+On the out-of-domain benchmark, GroundnutVLM matches the strongest closed-source model (Gemini 2.5 Pro) on identification (both 97.10%) while exceeding its classification accuracy by more than 57 percentage points — **99.40% vs. 41.60%**. Against the best open-source classifier (Gemma3-12B at 44.20%), GroundnutVLM surpasses it by over 55 points. These results establish GroundnutVLM as a state-of-the-art solution for groundnut disease diagnosis with strong cross-dataset generalization.
+
+---
+
+### 4. Qualitative Analysis — G-Eval Evaluation
+
+Following the same methodology applied to BananaVLM, GroundnutVLM's output quality is assessed using the **G-Eval prompting strategy**, where multiple LLMs act as judges to score and compare responses from the base LLaVA-v1.5-7B model against GroundnutVLM across four dimensions on a **1–5 scale**.
+
+| Dimension               | Description |
+| ----------------------- | ----------- |
+| **Disease ID**          | Correctness and specificity of disease identification |
+| **Classification**      | Accuracy of disease class assignment |
+| **Symptom Description** | Quality and precision of described visual symptoms |
+| **Management**          | Relevance and accuracy of suggested treatment or management actions |
+
+#### 4.1 G-Eval Results
+
+| Judge Model   | Base Disease ID | GroundnutVLM Disease ID | Base Cls | GroundnutVLM Cls | Base Symptoms | GroundnutVLM Symptoms | Base Mgmt | GroundnutVLM Mgmt | Win Rate |
+| ------------- | :-------------: | :---------------------: | :------: | :--------------: | :-----------: | :-------------------: | :-------: | :---------------: | :------: |
+| Qwen2.5-7B    | 1.62            | 4.12                    | 1.49     | 3.88             | 2.52          | 4.43                  | 2.62      | 4.00              | 0.89     |
+| Qwen2.5-14B   | 1.37            | 4.50                    | 0.80     | 4.42             | 2.23          | 4.49                  | 3.43      | 4.43              | 0.94     |
+| Qwen2.5-32B   | 1.66            | 4.46                    | 1.10     | 4.42             | 2.36          | 4.30                  | 3.47      | 4.09              | 0.93     |
+| Qwen2.5-72B   | 1.69            | 4.47                    | 0.81     | 4.43             | 2.71          | 4.18                  | 3.33      | 4.35              | 0.97     |
+| Mixtral       | 2.34            | 4.64                    | 1.60     | 4.52             | 2.68          | 4.74                  | 2.36      | 4.73              | 0.99     |
+| Mistral       | 1.80            | 4.73                    | 1.83     | 4.67             | 3.39          | 4.35                  | 3.23      | 3.88              | 0.86     |
+| Mistral-Small | 0.85            | 4.44                    | 0.95     | 4.28             | 2.50          | 4.10                  | 3.19      | 4.00              | 0.99     |
+| Llama3.1      | 1.58            | 4.68                    | 1.97     | 4.72             | 3.18          | 4.95                  | 2.63      | 4.67              | 0.97     |
+| Gemma3-12B    | 1.30            | 4.20                    | 0.95     | 4.13             | 2.12          | 3.97                  | 2.28      | 3.88              | 1.00     |
+
+#### 4.2 Human Expert Evaluation
+
+In addition to automated LLM judging, GroundnutVLM underwent **human expert evaluation**. Five domain experts independently reviewed 200 pairwise comparisons between base model and GroundnutVLM outputs, selecting which response they preferred.
+
+| Evaluator   | Base Model Preference | GroundnutVLM Preference | GroundnutVLM Win Rate |
+| ----------- | :-------------------: | :---------------------: | :-------------------: |
+| Evaluator 1 | 0 / 200               | 200 / 200               | **100.00%**           |
+| Evaluator 2 | 2 / 200               | 198 / 200               | **99.00%**            |
+| Evaluator 3 | 0 / 200               | 200 / 200               | **100.00%**           |
+| Evaluator 4 | 6 / 200               | 194 / 200               | **97.00%**            |
+| Evaluator 5 | 4 / 200               | 196 / 200               | **98.00%**            |
+
+#### 4.3 G-Eval Analysis
+
+GroundnutVLM dominates the base model across all nine judges and all four evaluation dimensions.
+
+**Disease Identification:** Base model scores range from 0.85 to 2.34 — reflecting generic or incorrect responses for groundnut-specific diseases that the base model has little grounding in. GroundnutVLM scores 4.12–4.73, indicating consistently correct and specific disease identification.
+
+**Classification:** The base model scores as low as 0.80 (Qwen2.5-14B judge), effectively failing to assign disease classes reliably. GroundnutVLM scores 3.88–4.72, a dramatic improvement attributable to the Stage 3 short Q&A label grounding in the instruction pipeline.
+
+**Symptom Description:** GroundnutVLM scores 3.97–4.95 vs. 2.12–3.39 for the base model. The highest score across all dimensions comes from Llama3.1 judging GroundnutVLM's symptom descriptions (4.95), suggesting that the symptom-grounded Stage 1 descriptions transfer exceptionally well to groundnut disease imagery.
+
+**Management:** GroundnutVLM scores 3.88–4.73 vs. 2.28–3.47 for the base. Notably, the base model performs relatively less poorly on management (its highest dimension), likely because generic crop management advice partially overlaps with groundnut-specific guidance. Yet GroundnutVLM still consistently outperforms it.
+
+**G-Eval Win Rates:** Win rates range from **0.86 to 1.00**, with four of the nine judges scoring GroundnutVLM at 0.97 or above. Gemma3-12B assigns a perfect win rate (1.00), and Mixtral and Mistral-Small both reach 0.99.
+
+**Human Expert Evaluation:** The human evaluation results are striking. Three of five experts assigned GroundnutVLM a **100% win rate** (Evaluators 1 and 3) or near-perfect rate (Evaluators 2 and 5 at 99% and 98%). The lowest expert preference was Evaluator 4 at 97%. Across all 1,000 pairwise expert judgements (200 × 5 evaluators), GroundnutVLM was preferred **988 times out of 1,000** — a 98.8% aggregate human win rate. This level of agreement between automated LLM judges and human domain experts provides strong validation that GroundnutVLM's qualitative output improvements are genuine and practically meaningful.
 
 ---
 
@@ -686,3 +897,6 @@ Results for GroundnutVLM will be reported here upon completion of evaluation.
 - [LLaVA Official Repository](https://github.com/haotian-liu/LLaVA)
 - [Ollama](https://ollama.com/)
 - [Multi-crop Disease Dataset](https://data.mendeley.com/datasets/6243z8r6t6/1)
+
+
+
