@@ -1,29 +1,66 @@
 # AgroVLM: Domain-Adapted Vision–Language Models for Crop Disease Diagnosis
 
-This repository provides the **complete pipeline to reproduce the AgroVLM experiments**, including dataset preparation, instruction data generation, dataset conversion, and model fine-tuning.
-
-**AgroVLM** is a suite of **domain-adapted vision–language models for crop disease diagnosis**. It currently includes two specialized sub-models:
-
-- **BananaVLM** — trained for banana disease diagnosis
-- **GroundnutVLM** — trained for groundnut (peanut) disease diagnosis
-
-Both models are built on **LLaVA-v1.5-7B** and trained using **parameter-efficient LoRA fine-tuning**. The training pipeline is identical for both sub-models; only the dataset differs.
+> **Master of Technology Thesis** — Artificial Intelligence  
+> Sangam Kumar Jena · Robert Bosch Centre for Cyber-Physical Systems, Indian Institute of Science, Bangalore · May 2026
 
 ---
 
-# Project Pipeline
+## Abstract
 
-The complete reproduction pipeline consists of the following stages (applicable to both BananaVLM and GroundnutVLM):
+Crop diseases are a major cause of agricultural yield loss worldwide, yet accurate field diagnosis remains challenging due to limited expert availability and the visual similarity between many disease classes. Although recent vision–language models (VLMs) have demonstrated strong general-purpose image understanding capabilities, they often struggle with specialised agricultural tasks requiring fine-grained disease recognition.
 
-1. Download crop disease dataset
-2. Generate instruction dataset (**BananaInstruct** / **GroundnutInstruct**)
-3. Convert dataset to **LLaVA training format**
-4. Fine-tune **LLaVA-v1.5-7B using LoRA**
-5. Evaluate the trained model
+This work presents **AgroVLM**, a suite of domain-adapted vision–language models for crop disease diagnosis. AgroVLM currently consists of two specialised sub-models: **BananaVLM**, developed for banana disease diagnosis, and **GroundnutVLM**, developed for groundnut disease diagnosis. Both models are built on LLaVA-v1.5-7B and fine-tuned using parameter-efficient LoRA adaptation.
+
+The results demonstrate that lightweight domain adaptation through automated instruction tuning is an effective and scalable strategy for specialised agricultural AI, enabling compact open-source VLMs to achieve strong performance on real-world crop disease diagnosis tasks — surpassing proprietary frontier models by up to **+73.9 percentage points** on classification.
 
 ---
 
-# Repository Structure
+## Table of Contents
+
+- [Motivation](#motivation)
+- [Contributions](#contributions)
+- [Repository Structure](#repository-structure)
+- [Project Pipeline](#project-pipeline)
+- [Setup](#setup)
+- [Datasets](#datasets)
+- [Instruction Dataset Generation](#instruction-dataset-generation)
+- [Model Architecture](#model-architecture)
+- [Training Methodology](#training-methodology)
+- [Training Configuration](#training-configuration)
+- [Run Training](#run-training)
+- [Evaluation](#evaluation)
+- [Results — BananaVLM](#results--bananavlm)
+- [Results — GroundnutVLM](#results--groundnutvlm)
+- [LoRA vs DoRA Analysis](#lora-vs-dora-analysis)
+- [Qualitative Evaluation (G-Eval)](#qualitative-evaluation-g-eval)
+- [Human Expert Evaluation](#human-expert-evaluation)
+- [Conclusion](#conclusion)
+- [Limitations and Future Work](#limitations-and-future-work)
+- [Figures to Add](#figures-to-add)
+- [References](#references)
+
+---
+
+## Motivation
+
+Agriculture is essential for global food security, yet crop diseases continue to cause major yield losses every year, particularly in developing regions with limited access to agronomic expertise. Early and accurate disease diagnosis is therefore critical for reducing economic loss and supporting sustainable farming practices.
+
+Traditional diagnosis relies on visual inspection by trained agronomists — a process that is expensive, geographically constrained, and difficult to scale. Deep learning-based approaches have shown strong potential for automated diagnosis, but most existing systems are classification-only models that provide disease labels without meaningful explanations or management guidance.
+
+Vision–language models (VLMs) provide a promising alternative by combining visual understanding with natural language generation. However, general-purpose VLMs trained on internet-scale data are poorly adapted to the fine-grained visual patterns required for agricultural disease diagnosis.
+
+---
+
+## Contributions
+
+1. **AgroVLM** — A suite of domain-adapted VLMs for crop disease diagnosis, comprising BananaVLM and GroundnutVLM, both built on LLaVA-v1.5-7B with LoRA fine-tuning.
+2. **Automated instruction dataset generation pipeline** — A three-stage pipeline (BananaInstruct / GroundnutInstruct) that converts raw crop disease image datasets into rich multimodal instruction-tuning datasets (~80,000 and ~75,000 Q&A pairs respectively) without manual annotation, using LLaVA-1.5-13B and Mistral-7B.
+3. **Comprehensive evaluation** — Benchmarking against 13 open-source and 7 closed-source VLM baselines using in-domain and out-of-domain test sets, G-Eval scoring by 9 LLM judges, and blind human expert evaluation.
+4. **State-of-the-art performance** — BananaVLM and GroundnutVLM substantially outperform all evaluated baselines on both disease identification and fine-grained classification tasks.
+
+---
+
+## Repository Structure
 
 ```
 agro-vlm
@@ -35,7 +72,7 @@ agro-vlm
 │   │   ├── data_generation.py
 │   │   └── data_format_converter.py
 │   ├── dataset
-│   │   └── banana.zip
+│   │   ├── banana.zip
 │   │   └── readme.md
 │   └── images
 │
@@ -46,7 +83,7 @@ agro-vlm
 │   │   ├── data_generation.py
 │   │   └── data_format_converter.py
 │   ├── dataset
-│   │   └── groundnut.zip
+│   │   ├── groundnut.zip
 │   │   └── readme.md
 │   └── images
 │
@@ -58,27 +95,35 @@ agro-vlm
 
 ---
 
-# 1. Clone the Repository
+## Project Pipeline
+
+The complete reproduction pipeline consists of the following stages (identical for both BananaVLM and GroundnutVLM; only the dataset differs):
+
+1. Download crop disease dataset
+2. Generate instruction dataset (**BananaInstruct** / **GroundnutInstruct**) via the three-stage pipeline
+3. Convert dataset to **LLaVA training format**
+4. Fine-tune **LLaVA-v1.5-7B using LoRA**
+5. Evaluate the trained model (in-domain + out-of-domain)
+
+---
+
+## Setup
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/samy101/agro-vlm.git
 cd agro-vlm
 ```
 
----
-
-# 2. Create Environment
-
-Create a conda environment with Python 3.10.
+### 2. Create Environment
 
 ```bash
 conda create -n agrovlm python=3.10.19
 conda activate agrovlm
 ```
 
----
-
-# 3. Install Dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -86,17 +131,14 @@ pip install -r requirements.txt
 
 ---
 
-# 4. Download Dataset
+## Datasets
 
-## BananaVLM Dataset
+### BananaVLM Dataset
 
-The banana disease images are derived from the **Multi-Crop Disease Dataset**.
+The banana disease images are derived from the **Multi-Crop Disease Dataset** (Mendeley Data).
 
-Original dataset:
-https://data.mendeley.com/datasets/6243z8r6t6/1
-
-Preprocessed banana subset:
-https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
+- **Original dataset:** https://data.mendeley.com/datasets/6243z8r6t6/1  
+- **Preprocessed banana subset:** https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
 
 Download and extract inside `BananaVLM/`. Expected structure:
 
@@ -114,27 +156,28 @@ banana_images
 
 **BananaVLM Dataset Statistics:**
 
-| Disease                 | Images |
-| ----------------------- | ------ |
+| Disease Class           | Images |
+|-------------------------|--------|
 | Bract Mosaic Virus      | 399    |
 | Cordana                 | 558    |
 | Moko                    | 445    |
-| Panama                  | 1117   |
+| Panama                  | 1,117  |
 | Pestalotiopsis          | 573    |
-| Sigatoka                | 1368   |
-| Yellow & Black Sigatoka | 2791   |
-| Healthy                 | 1079   |
-| **Total**               | **9018** |
+| Sigatoka                | 1,368  |
+| Yellow & Black Sigatoka | 2,791  |
+| Healthy                 | 1,079  |
+| **Total**               | **8,270** |
 
-## GroundnutVLM Dataset
+The dataset exhibits moderate class imbalance, with Yellow & Black Sigatoka being the most represented class and Bract Mosaic Virus the least. A **10% held-out split (905 images)** is reserved for in-domain evaluation.
 
-The groundnut disease images are similarly derived from a crop disease image dataset.
+---
 
-Dataset Download
+### GroundnutVLM Dataset
 
-GroundnutVLM dataset can be downloaded from the following link:
+The groundnut disease dataset contains four disease classes and one healthy class collected under real-world agricultural conditions.
 
-https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing
+- **Dataset:** https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing
+- **Out-of-domain test set:** [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
 
 Download and extract inside `GroundnutVLM/`. Expected structure:
 
@@ -144,50 +187,77 @@ groundnut_images
 ├── late_leaf_spot
 ├── healthy
 ├── rust
-└── nutritional deficiency
+└── nutritional_deficiency
 ```
 
 **GroundnutVLM Dataset Statistics:**
 
-| Disease                | Images   |
-| ---------------------- | -------- |
-| Early Leaf Spot        | 1213     |
+| Disease Class          | Images   |
+|------------------------|----------|
+| Early Leaf Spot        | 1,213    |
+| Late Leaf Spot         | 1,984    |
+| Nutritional Deficiency | 1,663    |
+| Rust                   | 3,195    |
 | Healthy                | 409      |
-| Late Leaf Spot         | 1984     |
-| Nutritional Deficiency | 1663     |
-| Rust                   | 3195     |
-| **Total**              | **8464** |
+| **Total**              | **8,464** |
 
-The pipeline for GroundnutVLM is identical to BananaVLM — simply substitute the groundnut dataset and the corresponding `GroundnutInstruct` files in all subsequent steps.
+A **10% held-out split (849 images)** is used for in-domain evaluation. The out-of-domain evaluation set (1,000 images) is sourced from a separate Kaggle dataset not seen during training.
 
 ---
 
-# 5. Instruction Dataset Generation
+### Test Set Statistics
 
-The instruction dataset converts the original disease image dataset into a **multimodal instruction tuning dataset** suitable for training vision–language models. This process transforms **image-only data into structured conversational supervision** using a **three-stage automated pipeline**.
+#### In-Domain Test Sets (10% held-out)
 
-The pipeline enriches each image with:
+| Crop      | Class                   | Images | Total |
+|-----------|-------------------------|--------|-------|
+| Banana    | Bract Mosaic Virus      | 40     | 797   |
+|           | Cordana                 | 56     |       |
+|           | Insect Pest             | 69     |       |
+|           | Moko                    | 45     |       |
+|           | Panama                  | 112    |       |
+|           | Pestalotiopsis          | 58     |       |
+|           | Sigatoka                | 137    |       |
+|           | Yellow & Black Sigatoka | 280    |       |
+| Groundnut | Early Leaf Spot         | 122    | 849   |
+|           | Healthy                 | 41     |       |
+|           | Late Leaf Spot          | 199    |       |
+|           | Nutritional Deficiency  | 167    |       |
+|           | Rust                    | 320    |       |
 
-- Visual symptom descriptions
-- Multi-turn reasoning conversations
-- Short classification-oriented question–answer pairs
+#### Out-of-Domain Test Sets (independent sources)
 
-This enables the model to learn disease recognition, symptom interpretation, contextual reasoning, and agricultural recommendations.
+| Crop      | Class                   | Images | Total |
+|-----------|-------------------------|--------|-------|
+| Banana    | Pestalotiopsis          | 173    | 743   |
+|           | Cordana                 | 162    |       |
+|           | Yellow & Black Sigatoka | 90     |       |
+|           | Insect Pest             | 86     |       |
+|           | Healthy                 | 86     |       |
+|           | Moko                    | 55     |       |
+|           | Bract Mosaic Virus      | 50     |       |
+|           | Panama                  | 41     |       |
+| Groundnut | Early Leaf Spot         | 168    | 1,000 |
+|           | Healthy                 | 168    |       |
+|           | Nutritional Deficiency  | 167    |       |
+|           | Late Leaf Spot          | 165    |       |
+|           | Rust                    | 332    |       |
 
 ---
 
-## Generation Pipeline
+## Instruction Dataset Generation
 
-![Instruction Generation Pipeline](Slide1.jpg)
+The instruction generation pipeline transforms image-only crop disease datasets into rich multimodal instruction-tuning datasets. The pipeline consists of **three stages**, each targeting a different aspect of agricultural language supervision.
 
-The pipeline consists of **three stages**.
+> 📷 **[Figure to add: Three-stage instruction generation pipeline diagram — Figure 3.2 from thesis]**
 
 ---
-## Stage 1 — Agricultural Image Description Generation
 
-**Model used:** `LLaVA-1.5-7B`
+### Stage 1 — Agricultural Image Description Generation
 
-In the first stage, the vision-language model generates detailed agricultural image descriptions focused strictly on visible plant symptoms. The prompt explicitly constrains the model to avoid speculation and describe only observable characteristics.
+**Model used:** LLaVA-1.5-13B
+
+Each crop disease image is processed to generate detailed symptom descriptions grounded in observable visual features — lesion morphology, chlorosis, necrosis, streak formation, tissue collapse — while avoiding speculation or unsupported claims.
 
 **Prompt Template:**
 
@@ -199,7 +269,7 @@ f"affected by {disease}. Focus only on what is visible."
 
 **Example output:**
 
-```text
+```
 The image shows a banana leaf with elongated dark streaks and irregular
 black lesions surrounded by yellow discoloration. Several portions of the
 leaf appear necrotic and dried, indicating severe leaf damage.
@@ -207,11 +277,11 @@ leaf appear necrotic and dried, indicating severe leaf damage.
 
 ---
 
-## Stage 2 — Complex Agricultural Q&A Generation
+### Stage 2 — Complex Agricultural Q&A Generation
 
-**Model used:** `Mistral-7B`
+**Model used:** Mistral-7B
 
-Multi-turn conversational supervision is generated to teach the model agricultural reasoning and contextual disease understanding. The model receives the Stage-1 image description, disease attributes, crop information, and curated external agricultural knowledge.
+Multi-turn conversational supervision is generated using the Stage 1 image description, disease attributes, crop information, and curated external agricultural knowledge sourced from university resources, extension service documents, technical blogs, and research articles. Between 3 and 5 Q&A pairs are generated per image, teaching symptom interpretation, contextual reasoning, disease progression understanding, and management recommendations.
 
 **Prompt Template:**
 
@@ -240,7 +310,7 @@ External Knowledge: {external_knowledge}
 
 **Example output:**
 
-```text
+```
 Q: What disease symptoms are visible on the leaf?
 A: The leaf shows dark streaks, yellow discoloration, and necrotic lesions.
 
@@ -253,11 +323,11 @@ A: High humidity and prolonged leaf wetness promote disease development.
 
 ---
 
-## Stage 3 — Short Q&A Label Grounding
+### Stage 3 — Short Q&A Label Grounding
 
-**Model used:** `Mistral-7B`
+**Model used:** Mistral-7B
 
-Short classification-oriented Q&A pairs are generated to strengthen the model’s grounding capability and improve discrimination between visually similar agricultural diseases. Answers are intentionally short and deterministic.
+Short classification-oriented Q&A pairs are generated to strengthen the model's label grounding and improve discrimination between visually similar disease classes. Answers are intentionally single-word and deterministic.
 
 **Prompt Template:**
 
@@ -280,7 +350,7 @@ Disease: {data['disease']}
 
 **Example output:**
 
-```text
+```
 Q: What crop is shown?
 A: Banana
 
@@ -293,42 +363,35 @@ A: Sigatoka
 Q: What plant part is affected?
 A: Leaf
 ```
----
-## Final Dataset
-
-After all three stages, the generated supervision is stored in:
-
-```
-banana_disease.jsonl    # for BananaVLM
-groundnut_disease.jsonl # for GroundnutVLM
-```
-
-Each file contains image path, image description, complex conversations, and simple classification Q&A.
-
-| Sub-model     | Source Images | Q&A Pairs (approx.) |
-| ------------- | ------------- | -------------------- |
-| BananaVLM     | 9,018         | ~80,000              |
-| GroundnutVLM  | TBD           | TBD                  |
 
 ---
 
-# 6. Convert Dataset to LLaVA Format
+### Final Instruction Datasets
+
+Each generated record (stored in JSONL format) contains: image path, Stage 1 description, Stage 2 conversational supervision, and Stage 3 short Q&A pairs. A random subset per disease class was manually reviewed by agricultural domain experts for factual and agronomic correctness. Generation was executed on an NVIDIA RTX 5090 GPU.
+
+| Sub-model        | Source Images | Q&A Pairs (approx.) |
+|------------------|---------------|----------------------|
+| BananaInstruct   | 8,270         | ~80,000              |
+| GroundnutInstruct| 8,464         | ~75,000              |
+
+---
+
+### Convert Dataset to LLaVA Format
 
 Open `data_format_converter.py` and modify:
 
-**For BananaVLM:**
 ```python
+# BananaVLM
 INPUT_FILE = "banana_disease.jsonl"
 OUTPUT_FILE = "banana.json"
-```
 
-**For GroundnutVLM:**
-```python
+# GroundnutVLM
 INPUT_FILE = "groundnut_disease.jsonl"
 OUTPUT_FILE = "groundnut.json"
 ```
 
-Run:
+Then run:
 
 ```bash
 python data_format_converter.py
@@ -336,7 +399,39 @@ python data_format_converter.py
 
 ---
 
-# 7. LLaVA Setup
+## Model Architecture
+
+Both BananaVLM and GroundnutVLM are built on **LLaVA-v1.5-7B**, which combines:
+
+- **Vision Encoder:** CLIP ViT-L/14 at 336×336 resolution — encodes input images into visual tokens.
+- **Projection Layer:** A two-layer MLP that maps visual tokens into the language model's embedding space.
+- **Language Model:** Vicuna-7B (LLaMA-2 based) — generates natural language responses conditioned on visual tokens and the instruction prompt.
+
+The 7B parameter scale makes the model tractable for single-GPU LoRA fine-tuning while providing a strong foundation for visual instruction following.
+
+---
+
+## Training Methodology
+
+### Parameter-Efficient Fine-Tuning
+
+Full fine-tuning of a 7B parameter model requires prohibitive GPU memory. AgroVLM therefore uses **Parameter-Efficient Fine-Tuning (PEFT)** methods that freeze pretrained weights and introduce a small number of trainable parameters into attention layers. Two variants were explored:
+
+#### Low-Rank Adaptation (LoRA)
+
+LoRA introduces trainable low-rank decomposition matrices into frozen attention layers. For a pretrained weight matrix W₀ ∈ ℝ^(d×k):
+
+```
+W = W₀ + ΔW = W₀ + BA
+```
+
+where B ∈ ℝ^(d×r) and A ∈ ℝ^(r×k) are trainable, r ≪ min(d, k) is the LoRA rank, and W₀ remains frozen. Effective trainable parameter count is r(d + k) per layer — orders of magnitude smaller than full fine-tuning.
+
+#### Weight-Decomposed Low-Rank Adaptation (DoRA)
+
+DoRA decomposes W₀ into a magnitude component m and direction component V, updating direction via LoRA and magnitude as a separate trainable scalar. While DoRA more closely mimics full fine-tuning behaviour in theory, **experiments showed it does not converge for the multi-class classification task** — LoRA was selected for the final models.
+
+### LLaVA Setup
 
 ```bash
 git clone https://github.com/haotian-liu/LLaVA.git
@@ -349,9 +444,7 @@ pip install -e ".[train]"
 pip install flash-attn --no-build-isolation
 ```
 
----
-
-# 8. Prepare Training Data
+### Prepare Training Data
 
 Copy the image folder and annotation file into `LLaVA/playground/data/`:
 
@@ -365,13 +458,11 @@ groundnut/
 groundnut.json
 ```
 
----
-
-# 9. Configure Training Script
+### Configure Training Script
 
 Open `scripts/v1_5/finetune_task_lora.sh` and update:
 
-```
+```bash
 # BananaVLM
 --data_path ./playground/data/banana.json
 --image_folder ./playground/data/
@@ -383,32 +474,33 @@ Open `scripts/v1_5/finetune_task_lora.sh` and update:
 
 ---
 
-# 10. Training Configuration
+## Training Configuration
 
-Both BananaVLM and GroundnutVLM use identical LoRA fine-tuning settings:
+Both BananaVLM and GroundnutVLM use the following LoRA fine-tuning settings. LoRA/DoRA weights are applied exclusively to the attention layers of Vicuna-7B; the CLIP vision encoder and MLP projection head are **not frozen** — the projector is fine-tuned at the same learning rate to adapt the visual-to-language mapping to the agricultural domain. All training uses **DeepSpeed ZeRO-2** optimisation for memory efficiency on a single GPU.
 
-| Parameter             | Value             |
-| --------------------- | ----------------- |
-| Base Model            | LLaVA-v1.5-7B     |
-| Vision Encoder        | CLIP ViT-L/14-336 |
-| LoRA Rank             | 16                |
-| LoRA Alpha            | 32                |
-| LoRA Dropout          | 0.05              |
-| Epochs                | 5                 |
-| Learning Rate         | 2e-5              |
-| Batch Size            | 1                 |
-| Gradient Accumulation | 4                 |
-| Max Sequence Length   | 2048              |
-
-**Hardware used:**
-
-```
-1 × NVIDIA RTX A6000 (48GB VRAM)
-```
+| Parameter             | Value                        |
+|-----------------------|------------------------------|
+| Base Model            | LLaVA-v1.5-7B                |
+| Vision Encoder        | CLIP ViT-L/14-336            |
+| LoRA Rank (r)         | 64                           |
+| LoRA Alpha (α)        | 16                           |
+| LoRA Dropout          | 0.05                         |
+| Training Epochs       | 7                            |
+| Learning Rate         | 2 × 10⁻⁵                    |
+| Projector LR          | 2 × 10⁻⁵                    |
+| Batch Size            | 1                            |
+| Gradient Accumulation | 2 (effective batch size: 2)  |
+| LR Scheduler          | Cosine                       |
+| Warmup Ratio          | 0.03                         |
+| Weight Decay          | 0.01                         |
+| Max Sequence Length   | 1,024 tokens                 |
+| Precision             | BF16 + TF32                  |
+| Optimiser             | DeepSpeed ZeRO-2             |
+| Hardware              | 1× NVIDIA RTX A6000 (48 GB)  |
 
 ---
 
-# 11. Run Training
+## Run Training
 
 ```bash
 bash scripts/v1_5/finetune_task_lora.sh
@@ -418,485 +510,366 @@ LoRA weights will be saved in `checkpoints/`.
 
 ---
 
-# 12. Evaluation
+## Evaluation
 
-Evaluation is performed on a **10% held-out test split**.
+Evaluation is performed on a **10% held-out in-domain test split** and an **independent out-of-domain dataset** not seen during training. Two tasks are evaluated:
 
-Two tasks are evaluated:
-
-- **Identification** — Healthy vs. Diseased (binary classification)
-- **Classification** — Fine-grained disease class prediction
+- **Identification** — Binary classification: Healthy vs. Diseased. Metrics: accuracy, precision, recall, F1.
+- **Classification** — Fine-grained disease-class prediction. Metrics: per-class precision, recall, F1, overall accuracy.
 
 Evaluation uses **substring matching** between predicted text and ground truth labels.
 
 ---
 
-# Results
+## Results — BananaVLM
 
-## BananaVLM Results
+### Epoch-wise Performance (LoRA)
 
-BananaVLM is evaluated on two distinct test splits to measure both specialization depth and real-world generalization ability:
+> 📷 **[Figure to add: BananaVLM LoRA epoch-wise accuracy chart — Figure 5.1 from thesis]**
 
-- **In-Domain** — Images drawn from the same distribution as the training data (10% held-out split from the BananaInstruct dataset)
-- **Out-of-Domain** — An entirely separate banana disease dataset not seen during training, used to assess transfer and robustness
+| Epoch   | In-Domain Classification (%) | Out-of-Domain Classification (%) | In-Domain Identification (%) | Out-of-Domain Identification (%) |
+|---------|:----------------------------:|:--------------------------------:|:----------------------------:|:--------------------------------:|
+| Epoch 3 | 63.61                        | 62.40                            | 97.67                        | 99.73                            |
+| Epoch 5 | 91.31                        | 65.75                            | 97.23                        | 99.60                            |
+| Epoch 7 | **92.31**                    | **83.28**                        | 96.90                        | 98.38                            |
 
-Two tasks are evaluated in both settings:
-
-- **Identification** — Binary prediction: Healthy vs. Diseased
-- **Classification** — Fine-grained prediction across disease classes
-
----
-
-### Dataset Statistics
-
-#### In-Domain Test Set (905 images, 9 classes)
-
-| Class                   | Images |
-| ----------------------- | ------ |
-| Bunchy Top Insect Pest  | 69     |
-| Cordana                 | 56     |
-| Healthy                 | 108    |
-| Moko                    | 45     |
-| Panama                  | 112    |
-| Pestalotiopsis          | 58     |
-| Sigatoka                | 137    |
-| Yellow & Black Sigatoka | 280    |
-| **Total**               | **905** |
-
-#### Out-of-Domain Test Set (743 images, 8 classes)
-
-| Class                              | Images |
-| ---------------------------------- | ------ |
-| Pestalotiopsis                     | 173    |
-| Cordana                            | 162    |
-| Banana Yellow & Black Sigatoka     | 90     |
-| Banana Insect Pest                 | 86     |
-| Healthy                            | 86     |
-| Banana Moko                        | 55     |
-| Banana Bract Mosaic Virus          | 50     |
-| Banana Panama                      | 41     |
-| **Total**                          | **743** |
+Classification accuracy improves substantially with more training epochs. Identification accuracy remains consistently high across all epochs (>96%), indicating binary disease detection converges early while fine-grained classification continues to refine.
 
 ---
 
-### 1. In-Domain Results
+### In-Domain Results (Epoch 7)
 
-#### 1.1 Epoch-wise Performance
+#### Per-Class Classification Report
 
-BananaVLM was evaluated at three checkpoints during training to track learning progression on the in-domain test set.
+| Class                   | Precision | Recall | F1-Score | Support |
+|-------------------------|:---------:|:------:|:--------:|:-------:|
+| Bract Mosaic Virus      | 0.97      | 0.95   | 0.96     | 40      |
+| Bunchy Top Insect Pest  | 0.90      | 0.44   | 0.59     | 61      |
+| Cordana                 | 0.96      | 0.93   | 0.95     | 56      |
+| Moko                    | 1.00      | 0.96   | 0.98     | 45      |
+| Panama                  | 0.95      | 0.91   | 0.93     | 112     |
+| Pestalotiopsis          | 1.00      | 0.88   | 0.94     | 58      |
+| Sigatoka                | 0.99      | 0.99   | 0.99     | 137     |
+| Yellow & Black Sigatoka | 0.95      | 0.99   | 0.97     | 280     |
+| **Overall Accuracy**    |           |        |          | **92.21%** |
 
-| Epoch   | Classification (%) | Identification (%) |
-| ------- | :----------------: | :----------------: |
-| Epoch 3 | 63.61              | 97.67              |
-| Epoch 5 | 91.31              | 97.23              |
-| Epoch 7 | 92.31              | 96.90              |
+Most disease classes achieve F1-scores above 0.93. The lowest-performing class is **Bunchy Top Insect Pest** (F1: 0.59), driven by low recall (0.44) — likely due to lower representation (69 training images) and visual overlap with healthy leaf tissue.
 
-Classification accuracy improves substantially with more training epochs, reaching **92.31%** at Epoch 7. Identification accuracy remains consistently high across all epochs (96.90–97.67%), indicating the model learns to distinguish healthy from diseased plants early in training, while fine-grained classification continues to refine with additional training.
-
-#### 1.2 Per-Class Classification Report (Epoch 7)
-
-| Class                  | Precision | Recall | F1-Score | Support |
-| ---------------------- | :-------: | :----: | :------: | :-----: |
-| Bract Mosaic Virus     | 0.97      | 0.95   | 0.96     | 40      |
-| Bunchy Top Insect Pest | 0.90      | 0.44   | 0.59     | 61      |
-| Cordana                | 0.96      | 0.93   | 0.95     | 56      |
-| Moko                   | 1.00      | 0.96   | 0.98     | 45      |
-| Panama                 | 0.95      | 0.91   | 0.93     | 112     |
-| Pestalotiopsis         | 1.00      | 0.88   | 0.94     | 58      |
-| Sigatoka               | 0.99      | 0.99   | 0.99     | 137     |
-| Yellow & Black Sigatoka| 0.95      | 0.99   | 0.97     | 280     |
-| **Overall Accuracy**   |           |        |          | **92.21%** |
-
-Most disease classes achieve F1-scores above 0.93. The lowest-performing class is **Bunchy Top Insect Pest** (F1: 0.59), driven by low recall (0.44), which indicates the model struggles to recall this visually distinctive class consistently — likely due to lower representation in the training set (69 images) and potential visual overlap with healthy leaf tissue.
-
-#### 1.3 Identification Report (In-Domain)
+#### Identification Report (In-Domain)
 
 | Metric    | Value  |
-| --------- | :----: |
+|-----------|:------:|
 | Accuracy  | 96.91% |
 | Precision | 0.9661 |
-| Recall    | 1.0000 |
+| Recall    | **1.0000** |
 | F1-Score  | 0.9827 |
 
-The model achieves **perfect recall (1.0)** on the identification task, meaning it correctly flags every diseased plant as diseased — a critical property for a crop disease detection system where false negatives (missed disease) are far more costly than false positives.
-
-#### 1.4 Open-Source VLM Comparison (In-Domain)
-
-| Model                | Identification (%) | Classification (%) |
-| -------------------- | :----------------: | :----------------: |
-| LLaVA-7B             | 67.40              | 12.15              |
-| LLaVA-13B            | 68.95              | 10.72              |
-| LLaVA-34B            | 80.44              | 8.73               |
-| Qwen2.5-VL-7B        | 71.05              | 0.00               |
-| Qwen3-VL-8B          | 85.97              | 12.04              |
-| Qwen3-VL-32B         | 85.52              | 9.72               |
-| LLaMA3-LLaVA-Next-8B | 56.80              | 11.16              |
-| Granite3.2-Vision    | 80.66              | 0.11               |
-| Gemma3-4B            | 89.72              | 12.49              |
-| Gemma3-12B           | 90.94              | 4.86               |
-| MiniCPM-V            | 92.27              | 11.60              |
-| Qwen2.5-VL-72B       | 82.54              | 8.95               |
-| **BananaVLM (Ours)** | **96.90**          | **92.21**          |
-
-#### 1.5 Closed-Source VLM Comparison (In-Domain)
-
-| Model               | Identification (%) | Classification (%) |
-| ------------------- | :----------------: | :----------------: |
-| Gemini 2.5 Flash Lite | 90.01            | 22.98              |
-| Gemini 2.5 Flash    | 91.22              | 40.87              |
-| Gemini 2.5 Pro      | 93.22              | 42.42              |
-| Gemini 3 Flash      | 93.90              | 40.08              |
-| Gemini 3 Pro        | 94.90              | 41.79              |
-| Gemini 3.1 Pro      | 92.90              | 42.28              |
-| **BananaVLM (Ours)**| **96.90**          | **92.21**          |
-
-On the in-domain benchmark, BananaVLM outperforms all open-source and closed-source baselines by a wide margin on classification. The best open-source model (MiniCPM-V) achieves only 11.60% classification accuracy, and the best closed-source model (Gemini 2.5 Pro) reaches 42.42% — BananaVLM surpasses both by more than 49 percentage points, demonstrating the transformative impact of domain-specific instruction tuning.
+The model achieves **perfect recall (1.0)** — it correctly flags every diseased plant as diseased. This is a critical property for a crop disease detection system where false negatives (missed disease) are far more costly than false positives.
 
 ---
 
-### 2. Out-of-Domain Results
+### Out-of-Domain Results (Epoch 7)
 
-Out-of-domain evaluation tests how well BananaVLM generalizes to an entirely unseen banana disease dataset, measuring robustness beyond its training distribution.
+#### Per-Class Classification Report
 
-#### 2.1 Epoch-wise Performance (Out-of-Domain)
+| Class                          | Precision | Recall | F1-Score | Support |
+|--------------------------------|:---------:|:------:|:--------:|:-------:|
+| Cordana                        | 0.9933    | 0.9198 | 0.9551   | 162     |
+| Pestalotiopsis                 | 0.9568    | 0.7688 | 0.8526   | 173     |
+| Banana Moko                    | 0.9483    | 1.0000 | 0.9735   | 55      |
+| Banana Panama                  | 0.7400    | 0.9024 | 0.8132   | 41      |
+| Banana Bract Mosaic Virus      | 0.6712    | 0.9800 | 0.7967   | 50      |
+| Banana Yellow & Black Sigatoka | 0.5732    | 1.0000 | 0.7287   | 90      |
+| Banana Insect Pest             | 1.0000    | 0.2532 | 0.4040   | 79      |
+| **Overall Accuracy**           |           |        |          | **83.28%** |
 
-| Epoch   | Classification (%) | Identification (%) |
-| ------- | :----------------: | :----------------: |
-| Epoch 3 | 62.40              | 99.73              |
-| Epoch 5 | 65.75              | 99.60              |
-| Epoch 7 | **83.28**          | 98.38              |
+The most challenging OOD class is **Banana Insect Pest** (F1: 0.40, recall: 0.25), reflecting difficulty in recognising visually variable insect damage patterns that differ from training images. Cordana and Moko show strong generalisation (F1: 0.96, 0.97).
 
-The model continues to improve on out-of-domain classification across epochs, reaching **83.28%** at Epoch 7, which confirms that the learned disease representations generalize well beyond the training distribution. Identification accuracy remains exceptionally high (>98%) at all checkpoints.
-
-#### 2.2 Per-Class Classification Report — Out-of-Domain (Epoch 7)
-
-| Class                              | Precision | Recall | F1-Score | Support |
-| ---------------------------------- | :-------: | :----: | :------: | :-----: |
-| Pestalotiopsis                     | 0.9568    | 0.7688 | 0.8526   | 173     |
-| Cordana                            | 0.9933    | 0.9198 | 0.9551   | 162     |
-| Banana Yellow & Black Sigatoka     | 0.5732    | 1.0000 | 0.7287   | 90      |
-| Banana Insect Pest                 | 1.0000    | 0.2532 | 0.4040   | 79      |
-| Banana Moko                        | 0.9483    | 1.0000 | 0.9735   | 55      |
-| Banana Bract Mosaic Virus          | 0.6712    | 0.9800 | 0.7967   | 50      |
-| Banana Panama                      | 0.7400    | 0.9024 | 0.8132   | 41      |
-| **Overall Accuracy**               |           |        |          | **83.28%** |
-
-On the out-of-domain set, the most challenging class is **Banana Insect Pest** (F1: 0.40), where recall drops to 0.25 — indicating difficulty in recognizing visually variable insect damage patterns that differ from training images. **Banana Yellow & Black Sigatoka** achieves perfect recall (1.0) but lower precision (0.57), reflecting some over-prediction of this class. **Cordana** and **Moko** show strong generalization with F1-scores of 0.96 and 0.97 respectively.
-
-#### 2.3 Identification Report (Out-of-Domain)
+#### Identification Report (Out-of-Domain)
 
 | Metric    | Value  |
-| --------- | :----: |
+|-----------|:------:|
 | Accuracy  | 98.38% |
 | Precision | 0.9864 |
 | Recall    | 0.9954 |
 | F1-Score  | 0.9909 |
 
-Even on completely unseen data, BananaVLM achieves **98.38% identification accuracy** — outperforming every general-purpose model tested. This demonstrates strong generalization of the disease presence/absence concept across different image capture conditions and class distributions.
+---
 
-#### 2.4 Open-Source VLM Comparison (Out-of-Domain)
+### Open-Source VLM Comparison — BananaVLM
 
-| Model                | Identification (%) | Classification (%) |
-| -------------------- | :----------------: | :----------------: |
-| LLaVA-7B             | 27.55              | 9.59               |
-| LLaVA-13B            | 7.61               | 20.85              |
-| LLaVA-34B            | 79.15              | 17.35              |
-| Qwen2.5-VL-7B        | 90.72              | 21.92              |
-| Qwen3-VL-8B          | 99.24              | 21.46              |
-| Qwen3-VL-32B         | 99.70              | 18.57              |
-| LLaMA3-LLaVA-Next-8B | 14.61              | 10.96              |
-| Granite Vision       | 2.44               | 31.81              |
-| Gemma3-4B            | 100.00             | 14.92              |
-| Gemma3-12B           | 99.70              | 15.22              |
-| LLaVA-Phi3-3.8B      | 11.87              | 27.70              |
-| MiniCPM-V            | 43.68              | 23.29              |
-| Qwen2.5-VL-72B       | 98.63              | 17.05              |
-| **BananaVLM (Ours)** | **98.38**          | **83.28**          |
+| Model                  | In-Domain ID (%) | In-Domain Cls (%) | OOD ID (%) | OOD Cls (%) |
+|------------------------|:----------------:|:-----------------:|:----------:|:-----------:|
+| LLaVA-7B               | 67.40            | 12.15             | 27.55      | 9.59        |
+| LLaVA-13B              | 68.95            | 10.72             | 7.61       | 20.85       |
+| LLaVA-34B              | 80.44            | 8.73              | 79.15      | 17.35       |
+| Qwen2.5-VL-7B          | 71.05            | 0.00              | 90.72      | 21.92       |
+| Qwen3-VL-8B            | 85.97            | 12.04             | 99.24      | 21.46       |
+| Qwen3-VL-32B           | 85.52            | 9.72              | 99.70      | 18.57       |
+| Qwen2.5-VL-72B         | 82.54            | 8.95              | 98.63      | 17.05       |
+| LLaMA3-LLaVA-Next-8B   | 56.80            | 11.16             | 14.61      | 10.96       |
+| Granite3.2-Vision      | 80.66            | 0.11              | 2.44       | 31.81       |
+| Gemma3-4B              | 89.72            | 12.49             | 100.00     | 14.92       |
+| Gemma3-12B             | 90.94            | 4.86              | 99.70      | 15.22       |
+| LLaVA-Phi3-3.8B        | 17.57            | 2.32              | 11.87      | 27.70       |
+| MiniCPM-V              | 92.27            | 11.60             | 43.68      | 23.29       |
+| **BananaVLM (Ours)**   | **96.90**        | **92.21**         | **98.38**  | **83.28**   |
 
-#### 2.5 Closed-Source VLM Comparison (Out-of-Domain)
+### Closed-Source VLM Comparison — BananaVLM
 
-| Model                | Identification (%) | Classification (%) |
-| -------------------- | :----------------: | :----------------: |
-| Gemini 2.5 Flash Lite | 97.14             | 13.24              |
-| Gemini 2.5 Flash     | 93.36              | 14.76              |
-| Gemini 2.5 Pro       | 95.01              | 20.09              |
-| Gemini 3.1 Flash Lite | 98.10             | 13.85              |
-| Gemini 3 Flash Preview | 96.44            | 23.90              |
-| **BananaVLM (Ours)** | **98.38**          | **83.28**          |
+| Model                    | In-Domain ID (%) | In-Domain Cls (%) | OOD ID (%) | OOD Cls (%) |
+|--------------------------|:----------------:|:-----------------:|:----------:|:-----------:|
+| Gemini 2.5 Flash Lite    | 90.01            | 22.98             | 97.14      | 13.24       |
+| Gemini 2.5 Flash         | 91.22            | 40.87             | 93.36      | 14.76       |
+| Gemini 2.5 Pro           | 93.22            | 42.42             | 95.01      | 20.09       |
+| Gemini 3 Flash Preview   | 93.90            | 40.08             | 96.44      | 23.90       |
+| Gemini 3 Pro             | 94.90            | 41.79             | —          | —           |
+| Gemini 3.1 Flash Lite    | 92.90            | 42.28             | 98.10      | 13.85       |
+| Gemini 3.1 Pro           | 92.90            | 42.28             | —          | —           |
+| **BananaVLM (Ours)**     | **96.90**        | **92.21**         | **98.38**  | **83.28**   |
 
-On out-of-domain data, BananaVLM achieves **83.28% classification accuracy** — more than 3× the best Gemini model's score (Gemini 3 Flash Preview at 23.90%) and more than 2.6× the best open-source classification result (Granite Vision at 31.81%). This is a compelling demonstration that domain-adapted instruction tuning transfers well across dataset distributions, not just within them.
+On the in-domain benchmark, BananaVLM outperforms all open-source and closed-source baselines by a wide margin on classification. The best closed-source model (Gemini 2.5 Pro) reaches 42.42% — BananaVLM surpasses it by **+49.8 percentage points** in-domain and **+63.3 pp** OOD.
 
 ---
 
-### 3. Qualitative Analysis — G-Eval Evaluation
+## Results — GroundnutVLM
 
-To evaluate the **quality of reasoning and language generation** — beyond raw classification accuracy — we conducted a qualitative assessment using the **G-Eval prompting strategy**. In G-Eval, multiple LLMs are used as evaluator judges to compare the open-ended text responses generated by the base LLaVA-v1.5-7B model against those generated by BananaVLM.
+### Epoch-wise Performance (LoRA)
 
-Four evaluation dimensions are scored on a **1–5 scale** by each judge model:
+> 📷 **[Figure to add: GroundnutVLM LoRA epoch-wise accuracy chart — Figure 5.2 from thesis]**
 
-| Dimension        | Description |
-| ---------------- | ----------- |
-| **Disease ID**   | Correctness and specificity of disease identification |
-| **Classification** | Accuracy of disease class assignment |
-| **Symptom Description** | Quality and precision of described visual symptoms |
-| **Management**   | Relevance and accuracy of suggested treatment or management actions |
+| Epoch   | ID — In-Domain | ID — OOD  | Cls — In-Domain | Cls — OOD  |
+|---------|:--------------:|:---------:|:---------------:|:----------:|
+| Epoch 3 | 96.70%         | 96.90%    | 97.90%          | 99.04%     |
+| Epoch 5 | 98.94%         | 97.00%    | 98.27%          | 98.32%     |
+| Epoch 7 | **99.18%**     | **97.10%**| **98.27%**      | **99.40%** |
 
-The **Win Rate** represents the proportion of pairwise comparisons where BananaVLM's output was preferred over the base model's output by the judge.
-
-#### 3.1 G-Eval Results
-
-| Judge Model       | Base Disease ID | BananaVLM Disease ID | Base Cls | BananaVLM Cls | Base Symptoms | BananaVLM Symptoms | Base Mgmt | BananaVLM Mgmt | Win Rate |
-| ----------------- | :-------------: | :------------------: | :------: | :-----------: | :-----------: | :----------------: | :-------: | :------------: | :------: |
-| llama3.1          | 1.47            | 4.28                 | 1.87     | 4.45          | 2.86          | 4.63               | 2.87      | 4.61           | 0.92     |
-| mistral           | 1.16            | 4.72                 | 1.13     | 4.46          | 2.60          | 4.23               | 2.79      | 3.97           | 0.83     |
-| mistral-small     | 0.72            | 3.70                 | 0.80     | 3.57          | 2.17          | 3.95               | 2.93      | 3.75           | 0.89     |
-| gemma3:12b        | 1.17            | 3.70                 | 1.01     | 3.61          | 2.03          | 3.68               | 2.25      | 3.70           | 0.96     |
-| qwen2.5:14b       | 0.81            | 3.87                 | 0.55     | 3.56          | 1.48          | 3.86               | 2.75      | 3.81           | 0.90     |
-| qwen2.5:32b       | 1.27            | 3.53                 | 0.98     | 3.30          | 1.95          | 3.57               | 3.03      | 3.66           | 0.82     |
-| qwen2.5:7b        | 1.33            | 3.68                 | 1.07     | 3.18          | 2.18          | 4.01               | 2.47      | 3.58           | 0.81     |
-| qwen2.5:72b       | 1.19            | 3.56                 | 0.62     | 3.20          | 2.14          | 3.66               | 2.89      | 3.85           | 0.87     |
-| mixtral           | 1.90            | 4.37                 | 1.45     | 4.27          | 2.43          | 4.63               | 2.33      | 4.37           | 0.96     |
-
-#### 3.2 G-Eval Analysis
-
-BananaVLM consistently and substantially outscores the base LLaVA-v1.5-7B model across all four evaluation dimensions and all nine judge models.
-
-**Disease Identification:** The base model scores between 0.72 and 1.90 across judges — reflecting near-random or generic responses that rarely identify the correct disease. BananaVLM scores between 3.53 and 4.72, indicating confident, specific, and correct disease identification in the vast majority of cases.
-
-**Classification:** The base model is particularly weak here (0.55–1.87), often failing to assign a disease class at all. BananaVLM improves this to 3.18–4.46, reflecting the effect of the short Q&A label grounding stage in Stage 3 of the instruction pipeline.
-
-**Symptom Description:** Judges score BananaVLM between 3.57 and 4.63 compared to 1.48–2.86 for the base model. This dimension benefits directly from Stage 1 of the pipeline, where LLaVA-13B generates rich, image-grounded symptom narratives that form the supervision signal.
-
-**Management Recommendations:** BananaVLM scores 3.58–4.61 vs. 2.25–3.03 for the base model. The multi-turn Stage 2 conversations, which include treatment and management Q&A grounded in external agricultural knowledge, are responsible for this gain.
-
-**Win Rate:** Across all nine judge models, BananaVLM achieves win rates between **0.81 and 0.96**, meaning the fine-tuned model is preferred in 81–96% of pairwise comparisons depending on the judge. The two highest win rates come from gemma3:12b and mixtral (both 0.96), while the lowest is qwen2.5:7b (0.81) — all still representing a dominant and consistent preference for BananaVLM's output quality.
-
-These results confirm that BananaVLM not only improves classification accuracy but produces substantially better agricultural reasoning and explanation quality compared to its general-purpose base model.
+GroundnutVLM achieves remarkably high accuracy from very early in training. OOD classification reaches **99.40%** at Epoch 7 — the highest single result in this work.
 
 ---
 
-## GroundnutVLM Results
+### In-Domain Results (Epoch 7)
 
-
-GroundnutVLM is evaluated on the same two-split framework as BananaVLM — an in-domain test set drawn from the training distribution and a fully separate out-of-domain dataset sourced from Kaggle — to measure both specialization depth and real-world generalizability.
-
-Two tasks are evaluated in both settings:
-
-- **Identification** — Binary prediction: Healthy vs. Diseased
-- **Classification** — Fine-grained prediction across disease classes
-
----
-
-### Dataset Statistics
-
-#### In-Domain Test Set (849 images, 5 classes)
-
-| Class                  | Images |
-| ---------------------- | ------ |
-| Early Leaf Spot        | 122    |
-| Late Leaf Spot         | 199    |
-| Nutritional Deficiency | 167    |
-| Rust                   | 320    |
-| Healthy                | 41     |
-| **Total**              | **849** |
-
-#### Out-of-Domain Test Set (1000 images, 5 classes)
-
-Source: [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
-
-| Class                  | Images |
-| ---------------------- | ------ |
-| Early Leaf Spot        | 168    |
-| Late Leaf Spot         | 165    |
-| Nutritional Deficiency | 167    |
-| Rust                   | 332    |
-| Healthy                | 168    |
-| **Total**              | **1,000** |
-
----
-
-### 1. Epoch-wise Performance
-
-GroundnutVLM was evaluated at three training checkpoints across both domain settings simultaneously.
-
-| Epoch   | ID Accuracy — In-Domain | ID Correct/Total | ID Accuracy — OOD | ID Correct/Total | Cls Accuracy — In-Domain | Cls Correct/Total | Cls Accuracy — OOD | Cls Correct/Total |
-| ------- | :---------------------: | :--------------: | :---------------: | :--------------: | :----------------------: | :---------------: | :----------------: | :---------------: |
-| Epoch 3 | 96.70%                  | 821 / 849        | 96.90%            | 969 / 1000       | 97.90%                   | 791 / 808         | 99.04%             | 824 / 832         |
-| Epoch 5 | 98.94%                  | 840 / 849        | 97.00%            | 970 / 1000       | 98.27%                   | 794 / 808         | 98.32%             | 818 / 832         |
-| Epoch 7 | **99.18%**              | 842 / 849        | **97.10%**        | 971 / 1000       | **98.27%**               | 794 / 808         | **99.40%**         | 827 / 832         |
-
-GroundnutVLM achieves remarkably high accuracy from very early in training — Epoch 3 already yields above 96% identification and above 97% classification on both domain splits. This rapid convergence reflects strong alignment between the GroundnutInstruct instruction dataset and the visual characteristics of the disease classes. By Epoch 7, classification accuracy reaches **99.40% out-of-domain**, indicating exceptional generalization.
-
----
-
-### 2. In-Domain Results
-
-#### 2.1 Per-Class Classification Report (Epoch 7)
+#### Per-Class Classification Report
 
 | Class                  | Precision | Recall | F1-Score | Support |
-| ---------------------- | :-------: | :----: | :------: | :-----: |
+|------------------------|:---------:|:------:|:--------:|:-------:|
 | Early Leaf Spot        | 0.95      | 0.98   | 0.97     | 122     |
 | Late Leaf Spot         | 0.99      | 0.97   | 0.98     | 199     |
 | Nutritional Deficiency | 1.00      | 0.91   | 0.95     | 167     |
 | Rust                   | 1.00      | 0.96   | 0.98     | 320     |
+| **Overall Accuracy**   |           |        | **0.97** | **98.27%** |
+
+All four disease classes achieve F1 ≥ 0.95. Nutritional Deficiency has the lowest recall (0.91), reflecting visual ambiguity between mild deficiency symptoms and early-stage disease lesions.
+
+#### Identification Report (In-Domain)
 
 | Metric             | Value  |
-| ------------------ | :----: |
-| Accuracy           | 98.27% |
+|--------------------|:------:|
+| Accuracy           | 99.18% |
 | Weighted Precision | 0.99   |
-| Weighted Recall    | 0.95   |
-| Weighted F1-Score  | 0.97   |
-
-All four disease classes achieve F1-scores of 0.95 or above. Nutritional Deficiency has the lowest recall (0.91), which may reflect visual ambiguity between mild deficiency symptoms and early-stage disease lesions. Rust and Late Leaf Spot achieve the strongest per-class performance (F1: 0.98), consistent with their distinctive visual patterns and higher representation in the training set.
-
-#### 2.2 Open-Source VLM Comparison (In-Domain)
-
-| Model                | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
-| -------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
-| LLaVA-7B             | 40.75              | 346 / 849     | 4.59               | 39 / 849      |
-| LLaVA-13B            | 18.73              | 159 / 849     | 8.01               | 68 / 849      |
-| LLaVA-34B            | 80.33              | 682 / 849     | 14.02              | 119 / 849     |
-| Qwen2.5-VL-7B        | 83.75              | 711 / 849     | 1.77               | 15 / 849      |
-| Qwen3-VL-8B          | 95.05              | 807 / 849     | 34.16              | 290 / 849     |
-| Qwen3-VL-32B         | 95.41              | 810 / 849     | 28.27              | 240 / 849     |
-| Granite3.2-Vision    | 9.31               | 79 / 849      | 10.37              | 88 / 849      |
-| Gemma3-4B            | 96.00              | 815 / 849     | 32.63              | 277 / 849     |
-| Gemma3-12B           | 97.06              | 824 / 849     | 42.29              | 359 / 849     |
-| LLaVA-Phi3-3.8B      | 16.02              | 136 / 849     | 6.12               | 52 / 849      |
-| MiniCPM-V            | 35.81              | 304 / 849     | 28.74              | 244 / 849     |
-| Qwen2.5-VL-72B       | 90.58              | 769 / 849     | 3.53               | 30 / 849      |
-| BakLLaVA             | 21.55              | 183 / 849     | 1.65               | 14 / 849      |
-| **GroundnutVLM (Ours)** | **99.18**       | **842 / 849** | **98.27**          | **794 / 808** |
-
-#### 2.3 Closed-Source VLM Comparison (In-Domain)
-
-| Model                  | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
-| ---------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
-| Gemini 2.5 Pro         | 99.18              | 842 / 849     | 24.38              | 197 / 808     |
-| Gemini 2.5 Flash       | 98.94              | 840 / 849     | 11.26              | 91 / 808      |
-| Gemini 3 Flash Preview | 98.35              | 835 / 849     | 17.95              | 145 / 808     |
-| Gemini 3.1 Flash Lite  | 97.76              | 830 / 849     | 24.38              | 197 / 808     |
-| Gemini 2.5 Flash Lite  | 96.70              | 821 / 849     | 4.95               | 40 / 808      |
-| **GroundnutVLM (Ours)**| **99.18**          | **842 / 849** | **98.27**          | **794 / 808** |
-
-On the in-domain benchmark, GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identification (both 99.18%) while achieving **4× higher classification accuracy** — 98.27% vs. 24.38%. Against the best open-source model on classification (Gemma3-12B at 42.29%), GroundnutVLM exceeds it by more than 55 percentage points.
+| Weighted Recall    | 1.00   |
 
 ---
 
-### 3. Out-of-Domain Results
+### Out-of-Domain Results (Epoch 7)
 
-#### 3.1 Per-Class Classification Report — Out-of-Domain (Epoch 7)
+#### Per-Class Classification Report
 
 | Class                  | Precision | Recall | F1-Score | Support |
-| ---------------------- | :-------: | :----: | :------: | :-----: |
-| Early Leaf Spot        | 1.0000    | 1.0000 | 1.0000   | 168     |
-| Late Leaf Spot         | 1.0000    | 1.0000 | 1.0000   | 165     |
+|------------------------|:---------:|:------:|:--------:|:-------:|
+| Early Leaf Spot        | 1.0000    | 1.0000 | **1.0000** | 168   |
+| Late Leaf Spot         | 1.0000    | 1.0000 | **1.0000** | 165   |
 | Nutritional Deficiency | 1.0000    | 0.9701 | 0.9848   | 167     |
 | Rust                   | 1.0000    | 0.9759 | 0.9878   | 332     |
+| **Overall Accuracy**   |           |        |          | **99.40%** |
 
-| Metric             | Value  |
-| ------------------ | :----: |
-| Accuracy           | 99.40% |
-| Weighted Precision | 1.0000 |
-| Weighted Recall    | 0.9844 |
-| Weighted F1-Score  | 0.9921 |
+Early Leaf Spot and Late Leaf Spot achieve **perfect precision, recall, and F1 (1.0)** on an entirely unseen dataset. Weighted precision is perfect (1.0000) — zero false positives across the entire OOD test set.
 
-The out-of-domain classification report is exceptional. Early Leaf Spot and Late Leaf Spot achieve **perfect precision, recall, and F1 (1.0)** on an entirely unseen dataset. Nutritional Deficiency and Rust both achieve F1-scores above 0.98. Weighted precision is perfect (1.0000), meaning every positive prediction made by the model is correct — there are zero false positives across the entire out-of-domain test set.
+#### Identification Report (Out-of-Domain)
 
-#### 3.2 Open-Source VLM Comparison (Out-of-Domain)
-
-| Model                | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
-| -------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
-| LLaVA-7B             | 42.90              | 429 / 1000    | 5.30               | 53 / 1000     |
-| LLaVA-13B            | 25.90              | 259 / 1000    | 8.40               | 84 / 1000     |
-| LLaVA-34B            | 72.20              | 722 / 1000    | 12.20              | 122 / 1000    |
-| Qwen2.5-VL-7B        | 80.70              | 807 / 1000    | 1.60               | 16 / 1000     |
-| Qwen3-VL-8B          | 92.80              | 928 / 1000    | 35.40              | 354 / 1000    |
-| Qwen3-VL-32B         | 93.00              | 930 / 1000    | 27.90              | 279 / 1000    |
-| Granite3.2-Vision    | 16.70              | 167 / 1000    | 7.70               | 77 / 1000     |
-| Gemma3-4B            | 84.70              | 847 / 1000    | 31.60              | 316 / 1000    |
-| Gemma3-12B           | 93.30              | 933 / 1000    | 44.20              | 442 / 1000    |
-| LLaVA-Phi3-3.8B      | 20.80              | 208 / 1000    | 6.80               | 68 / 1000     |
-| MiniCPM-V            | 35.70              | 357 / 1000    | 25.40              | 254 / 1000    |
-| Qwen2.5-VL-72B       | 87.20              | 872 / 1000    | 2.40               | 24 / 1000     |
-| BakLLaVA             | 26.30              | 263 / 1000    | 2.00               | 20 / 1000     |
-| **GroundnutVLM (Ours)** | **97.10**       | **971 / 1000**| **99.40%**         | **827 / 832** |
-
-#### 3.3 Closed-Source VLM Comparison (Out-of-Domain)
-
-| Model                  | Identification (%) | Correct/Total | Classification (%) | Correct/Total |
-| ---------------------- | :----------------: | :-----------: | :----------------: | :-----------: |
-| Gemini 2.5 Pro         | 97.10              | 971 / 1000    | 41.60              | 416 / 1000    |
-| Gemini 2.5 Flash       | 97.00              | 970 / 1000    | 24.80              | 248 / 1000    |
-| Gemini 3 Flash Preview | 96.90              | 969 / 1000    | 26.40              | 264 / 1000    |
-| Gemini 3.1 Flash Lite  | 96.80              | 968 / 1000    | 23.40              | 234 / 1000    |
-| Gemini 2.5 Flash Lite  | 96.70              | 967 / 1000    | 12.10              | 121 / 1000    |
-| **GroundnutVLM (Ours)**| **97.10**          | **971 / 1000**| **99.40%**         | **827 / 832** |
-
-On the out-of-domain benchmark, GroundnutVLM matches the strongest closed-source model (Gemini 2.5 Pro) on identification (both 97.10%) while exceeding its classification accuracy by more than 57 percentage points — **99.40% vs. 41.60%**. Against the best open-source classifier (Gemma3-12B at 44.20%), GroundnutVLM surpasses it by over 55 points. These results establish GroundnutVLM as a state-of-the-art solution for groundnut disease diagnosis with strong cross-dataset generalization.
+| Metric    | Value  |
+|-----------|:------:|
+| Accuracy  | 97.10% |
 
 ---
 
-### 4. Qualitative Analysis — G-Eval Evaluation
+### Open-Source VLM Comparison — GroundnutVLM
 
-Following the same methodology applied to BananaVLM, GroundnutVLM's output quality is assessed using the **G-Eval prompting strategy**, where multiple LLMs act as judges to score and compare responses from the base LLaVA-v1.5-7B model against GroundnutVLM across four dimensions on a **1–5 scale**.
+| Model                     | In-Domain ID (%) | In-Domain Cls (%) | OOD ID (%) | OOD Cls (%) |
+|---------------------------|:----------------:|:-----------------:|:----------:|:-----------:|
+| LLaVA-7B                  | 40.75            | 4.59              | 42.90      | 5.30        |
+| LLaVA-13B                 | 18.73            | 8.01              | 25.90      | 8.40        |
+| LLaVA-34B                 | 80.33            | 14.02             | 72.20      | 12.20       |
+| Qwen2.5-VL-7B             | 83.75            | 1.77              | 80.70      | 1.60        |
+| Qwen3-VL-8B               | 95.05            | 34.16             | 92.80      | 35.40       |
+| Qwen3-VL-32B              | 95.41            | 28.27             | 93.00      | 27.90       |
+| Qwen2.5-VL-72B            | 90.58            | 3.53              | 87.20      | 2.40        |
+| Granite3.2-Vision         | 9.31             | 10.37             | 16.70      | 7.70        |
+| Gemma3-4B                 | 96.00            | 32.63             | 84.70      | 31.60       |
+| Gemma3-12B                | 97.06            | 42.29             | 93.30      | 44.20       |
+| LLaVA-Phi3-3.8B           | 16.02            | 6.12              | 20.80      | 6.80        |
+| MiniCPM-V                 | 35.81            | 28.74             | 35.70      | 25.40       |
+| BakLLaVA                  | 21.55            | 1.65              | 26.30      | 2.00        |
+| **GroundnutVLM (Ours)**   | **99.18**        | **98.27**         | **97.10**  | **99.40**   |
 
-| Dimension               | Description |
-| ----------------------- | ----------- |
-| **Disease ID**          | Correctness and specificity of disease identification |
-| **Classification**      | Accuracy of disease class assignment |
+### Closed-Source VLM Comparison — GroundnutVLM
+
+| Model                    | In-Domain ID (%) | In-Domain Cls (%) | OOD ID (%) | OOD Cls (%) |
+|--------------------------|:----------------:|:-----------------:|:----------:|:-----------:|
+| Gemini 2.5 Flash Lite    | 96.70            | 4.95              | 96.70      | 12.10       |
+| Gemini 2.5 Flash         | 98.94            | 11.26             | 97.00      | 24.80       |
+| Gemini 2.5 Pro           | **99.18**        | 24.38             | 97.10      | 41.60       |
+| Gemini 3 Flash Preview   | 98.35            | 17.95             | 96.90      | 26.40       |
+| Gemini 3.1 Flash Lite    | 97.76            | 24.38             | 96.80      | 23.40       |
+| **GroundnutVLM (Ours)**  | **99.18**        | **98.27**         | **97.10**  | **99.40**   |
+
+GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identification (both 99.18%) while achieving **4× higher classification accuracy** in-domain (98.27% vs. 24.38%) and exceeding the best OOD closed-source result by **+57.8 pp** (99.40% vs. 41.60%).
+
+---
+
+## LoRA vs DoRA Analysis
+
+> 📷 **[Figure to add: BananaVLM DoRA epoch-wise accuracy chart — Figure 5.3 from thesis]**
+> 📷 **[Figure to add: GroundnutVLM DoRA epoch-wise accuracy chart — Figure 5.4 from thesis]**
+
+Both PEFT variants were trained with identical hyperparameters (rank 64, alpha 16) for direct comparison.
+
+| Method | Banana In-Domain Cls (%) | Banana OOD Cls (%) | Groundnut In-Domain Cls (%) | Groundnut OOD Cls (%) |
+|--------|--------------------------|--------------------|-----------------------------|-----------------------|
+| LoRA   | **92.21**                | **83.28**          | **98.27**                   | **99.40**             |
+| DoRA   | ~19.5 (degrades)         | ~9.0               | ~38–40 (saturates)          | ~38–40                |
+
+**DoRA does not converge for multi-class disease classification.** While identification accuracy remains high (>96%) under both methods, DoRA's magnitude–direction weight decomposition introduces optimisation instability that impairs multi-class classification. Small errors in the magnitude component amplify misclassifications across visually similar disease classes. **LoRA is used for all final models.**
+
+---
+
+## Qualitative Evaluation (G-Eval)
+
+Beyond raw accuracy, response quality is assessed using the **G-Eval prompting strategy**: nine open-source LLM judges independently score responses on a 1–5 scale across four agronomic dimensions, with the Win Rate representing the fraction of pairwise comparisons where the fine-tuned model is preferred.
+
+| Dimension            | Description |
+|----------------------|-------------|
+| **Disease ID**       | Correctness and specificity of disease identification |
+| **Classification**   | Accuracy of disease class assignment |
 | **Symptom Description** | Quality and precision of described visual symptoms |
-| **Management**          | Relevance and accuracy of suggested treatment or management actions |
+| **Management**       | Relevance and accuracy of suggested treatment or management actions |
 
-#### 4.1 G-Eval Results
+### BananaVLM G-Eval Results
 
-| Judge Model   | Base Disease ID | GroundnutVLM Disease ID | Base Cls | GroundnutVLM Cls | Base Symptoms | GroundnutVLM Symptoms | Base Mgmt | GroundnutVLM Mgmt | Win Rate |
-| ------------- | :-------------: | :---------------------: | :------: | :--------------: | :-----------: | :-------------------: | :-------: | :---------------: | :------: |
-| Qwen2.5-7B    | 1.62            | 4.12                    | 1.49     | 3.88             | 2.52          | 4.43                  | 2.62      | 4.00              | 0.89     |
-| Qwen2.5-14B   | 1.37            | 4.50                    | 0.80     | 4.42             | 2.23          | 4.49                  | 3.43      | 4.43              | 0.94     |
-| Qwen2.5-32B   | 1.66            | 4.46                    | 1.10     | 4.42             | 2.36          | 4.30                  | 3.47      | 4.09              | 0.93     |
-| Qwen2.5-72B   | 1.69            | 4.47                    | 0.81     | 4.43             | 2.71          | 4.18                  | 3.33      | 4.35              | 0.97     |
-| Mixtral       | 2.34            | 4.64                    | 1.60     | 4.52             | 2.68          | 4.74                  | 2.36      | 4.73              | 0.99     |
-| Mistral       | 1.80            | 4.73                    | 1.83     | 4.67             | 3.39          | 4.35                  | 3.23      | 3.88              | 0.86     |
-| Mistral-Small | 0.85            | 4.44                    | 0.95     | 4.28             | 2.50          | 4.10                  | 3.19      | 4.00              | 0.99     |
-| Llama3.1      | 1.58            | 4.68                    | 1.97     | 4.72             | 3.18          | 4.95                  | 2.63      | 4.67              | 0.97     |
-| Gemma3-12B    | 1.30            | 4.20                    | 0.95     | 4.13             | 2.12          | 3.97                  | 2.28      | 3.88              | 1.00     |
+| Judge Model    | Base Disease ID | BananaVLM Disease ID | Base Cls | BananaVLM Cls | Base Symptoms | BananaVLM Symptoms | Base Mgmt | BananaVLM Mgmt | Win Rate |
+|----------------|:---------------:|:--------------------:|:--------:|:-------------:|:-------------:|:------------------:|:---------:|:--------------:|:--------:|
+| llama3.1       | 1.47            | 4.28                 | 1.87     | 4.45          | 2.86          | 4.63               | 2.87      | 4.61           | 0.92     |
+| mistral        | 1.16            | 4.72                 | 1.13     | 4.46          | 2.60          | 4.23               | 2.79      | 3.97           | 0.83     |
+| mistral-small  | 0.72            | 3.70                 | 0.80     | 3.57          | 2.17          | 3.95               | 2.93      | 3.75           | 0.89     |
+| gemma3:12b     | 1.17            | 3.70                 | 1.01     | 3.61          | 2.03          | 3.68               | 2.25      | 3.70           | 0.96     |
+| qwen2.5:14b    | 0.81            | 3.87                 | 0.55     | 3.56          | 1.48          | 3.86               | 2.75      | 3.81           | 0.90     |
+| qwen2.5:32b    | 1.27            | 3.53                 | 0.98     | 3.30          | 1.95          | 3.57               | 3.03      | 3.66           | 0.82     |
+| qwen2.5:7b     | 1.33            | 3.68                 | 1.07     | 3.18          | 2.18          | 4.01               | 2.47      | 3.58           | 0.81     |
+| qwen2.5:72b    | 1.19            | 3.56                 | 0.62     | 3.20          | 2.14          | 3.66               | 2.89      | 3.85           | 0.87     |
+| mixtral        | 1.90            | 4.37                 | 1.45     | 4.27          | 2.43          | 4.63               | 2.33      | 4.37           | 0.96     |
 
-#### 4.2 Human Expert Evaluation
+BananaVLM is preferred in **81–96%** of comparisons across all nine judges and all four dimensions.
 
-In addition to automated LLM judging, GroundnutVLM underwent **human expert evaluation**. Five domain experts independently reviewed 200 pairwise comparisons between base model and GroundnutVLM outputs, selecting which response they preferred.
+### GroundnutVLM G-Eval Results
 
-| Evaluator   | Base Model Preference | GroundnutVLM Preference | GroundnutVLM Win Rate |
-| ----------- | :-------------------: | :---------------------: | :-------------------: |
-| Evaluator 1 | 0 / 200               | 200 / 200               | **100.00%**           |
-| Evaluator 2 | 2 / 200               | 198 / 200               | **99.00%**            |
-| Evaluator 3 | 0 / 200               | 200 / 200               | **100.00%**           |
-| Evaluator 4 | 6 / 200               | 194 / 200               | **97.00%**            |
-| Evaluator 5 | 4 / 200               | 196 / 200               | **98.00%**            |
+| Judge Model    | Base Disease ID | GroundnutVLM Disease ID | Base Cls | GroundnutVLM Cls | Base Symptoms | GroundnutVLM Symptoms | Base Mgmt | GroundnutVLM Mgmt | Win Rate |
+|----------------|:---------------:|:-----------------------:|:--------:|:----------------:|:-------------:|:---------------------:|:---------:|:-----------------:|:--------:|
+| Qwen2.5-7B     | 1.62            | 4.12                    | 1.49     | 3.88             | 2.52          | 4.43                  | 2.62      | 4.00              | 0.89     |
+| Qwen2.5-14B    | 1.37            | 4.50                    | 0.80     | 4.42             | 2.23          | 4.49                  | 3.43      | 4.43              | 0.94     |
+| Qwen2.5-32B    | 1.66            | 4.46                    | 1.10     | 4.42             | 2.36          | 4.30                  | 3.47      | 4.09              | 0.93     |
+| Qwen2.5-72B    | 1.69            | 4.47                    | 0.81     | 4.43             | 2.71          | 4.18                  | 3.33      | 4.35              | 0.97     |
+| Mixtral        | 2.34            | 4.64                    | 1.60     | 4.52             | 2.68          | 4.74                  | 2.36      | 4.73              | 0.99     |
+| Mistral        | 1.80            | 4.73                    | 1.83     | 4.67             | 3.39          | 4.35                  | 3.23      | 3.88              | 0.86     |
+| Mistral-Small  | 0.85            | 4.44                    | 0.95     | 4.28             | 2.50          | 4.10                  | 3.19      | 4.00              | 0.99     |
+| Llama3.1       | 1.58            | 4.68                    | 1.97     | 4.72             | 3.18          | 4.95                  | 2.63      | 4.67              | 0.97     |
+| Gemma3-12B     | 1.30            | 4.20                    | 0.95     | 4.13             | 2.12          | 3.97                  | 2.28      | 3.88              | **1.00** |
 
-#### 4.3 G-Eval Analysis
-
-GroundnutVLM dominates the base model across all nine judges and all four evaluation dimensions.
-
-**Disease Identification:** Base model scores range from 0.85 to 2.34 — reflecting generic or incorrect responses for groundnut-specific diseases that the base model has little grounding in. GroundnutVLM scores 4.12–4.73, indicating consistently correct and specific disease identification.
-
-**Classification:** The base model scores as low as 0.80 (Qwen2.5-14B judge), effectively failing to assign disease classes reliably. GroundnutVLM scores 3.88–4.72, a dramatic improvement attributable to the Stage 3 short Q&A label grounding in the instruction pipeline.
-
-**Symptom Description:** GroundnutVLM scores 3.97–4.95 vs. 2.12–3.39 for the base model. The highest score across all dimensions comes from Llama3.1 judging GroundnutVLM's symptom descriptions (4.95), suggesting that the symptom-grounded Stage 1 descriptions transfer exceptionally well to groundnut disease imagery.
-
-**Management:** GroundnutVLM scores 3.88–4.73 vs. 2.28–3.47 for the base. Notably, the base model performs relatively less poorly on management (its highest dimension), likely because generic crop management advice partially overlaps with groundnut-specific guidance. Yet GroundnutVLM still consistently outperforms it.
-
-**G-Eval Win Rates:** Win rates range from **0.86 to 1.00**, with four of the nine judges scoring GroundnutVLM at 0.97 or above. Gemma3-12B assigns a perfect win rate (1.00), and Mixtral and Mistral-Small both reach 0.99.
-
-**Human Expert Evaluation:** The human evaluation results are striking. Three of five experts assigned GroundnutVLM a **100% win rate** (Evaluators 1 and 3) or near-perfect rate (Evaluators 2 and 5 at 99% and 98%). The lowest expert preference was Evaluator 4 at 97%. Across all 1,000 pairwise expert judgements (200 × 5 evaluators), GroundnutVLM was preferred **988 times out of 1,000** — a 98.8% aggregate human win rate. This level of agreement between automated LLM judges and human domain experts provides strong validation that GroundnutVLM's qualitative output improvements are genuine and practically meaningful.
+GroundnutVLM win rates range from **0.86 to 1.00** across all nine judges.
 
 ---
 
-# References
+## Human Expert Evaluation
+
+Five domain experts independently reviewed pairwise comparisons between base model and AgroVLM outputs in a **blind evaluation protocol** (no model labels shown). Evaluators selected the response they considered more accurate, complete, and agronomically actionable.
+
+### BananaVLM (198 comparisons per evaluator)
+
+| Evaluator   | Base Model | BananaVLM  | Win Rate   |
+|-------------|:----------:|:----------:|:----------:|
+| Evaluator 1 | 1 / 198    | 197 / 198  | 99.49%     |
+| Evaluator 2 | 0 / 198    | 198 / 198  | **100.00%**|
+| Evaluator 3 | 7 / 198    | 191 / 198  | 96.46%     |
+| Evaluator 4 | 4 / 198    | 194 / 198  | 97.98%     |
+| Evaluator 5 | 3 / 198    | 195 / 198  | 98.48%     |
+| **Aggregate** | **15/990** | **975/990** | **98.48%** |
+
+### GroundnutVLM (200 comparisons per evaluator)
+
+| Evaluator   | Base Model | GroundnutVLM | Win Rate   |
+|-------------|:----------:|:------------:|:----------:|
+| Evaluator 1 | 0 / 200    | 200 / 200    | **100.00%**|
+| Evaluator 2 | 2 / 200    | 198 / 200    | 99.00%     |
+| Evaluator 3 | 0 / 200    | 200 / 200    | **100.00%**|
+| Evaluator 4 | 6 / 200    | 194 / 200    | 97.00%     |
+| Evaluator 5 | 4 / 200    | 196 / 200    | 98.00%     |
+| **Aggregate** | **12/1000** | **988/1000** | **98.8%** |
+
+Across all 1,990 total expert judgements, AgroVLM was preferred in **98.6%** of comparisons. The near-perfect agreement across five independent evaluators, closely corroborated by G-Eval win rates of 0.81–1.00 across nine LLM judges, provides strong convergent validity for the qualitative improvements introduced by domain fine-tuning.
+
+---
+
+## Conclusion
+
+AgroVLM demonstrates that **lightweight, targeted domain adaptation through automated instruction tuning is an effective and scalable strategy for agricultural AI**. Key findings:
+
+- **LoRA substantially outperforms DoRA** for multi-class disease classification (92.21% vs. ~19.5% on banana; 98.27% vs. ~39% on groundnut).
+- **Strong out-of-domain generalisation:** GroundnutVLM achieves 99.40% OOD classification with zero false positives; BananaVLM retains 83.28% on an entirely independent test set.
+- **Domain adaptation decisively outperforms scale:** AgroVLM exceeds Gemini 2.5 Pro by up to +73.9 pp on classification and surpasses all open-source baselines by more than 50 pp — regardless of model size. A 7B-parameter model with targeted fine-tuning on ~800 labelled images outperforms a zero-shot 72B model.
+- **Expert validation confirms practical utility:** Human agronomists preferred AgroVLM outputs in 98.6% of 1,990 blind comparisons, closely corroborated by automated G-Eval judges.
+
+---
+
+## Limitations and Future Work
+
+- **Additional crops:** Extending the pipeline to wheat, rice, tomato, and other staple crops would broaden agronomic coverage.
+- **Multilingual deployment:** Adapting for multilingual instruction tuning and on-device deployment (e.g. 4-bit quantisation) to increase accessibility in developing regions.
+- **Improving weak classes:** Bunchy Top Insect Pest (banana, F1=0.59) and Insect Pest OOD (F1=0.40) require targeted augmentation or few-shot adaptation strategies.
+- **Continual learning:** A continual learning framework would allow incremental updates as new disease variants emerge without full retraining.
+- **Field deployment:** Integration into a mobile application with real-time inference, GPS-tagged disease reporting, and agronomist feedback loops.
+
+---
+
+## Figures to Add
+
+The following figures from the thesis report should be added to this README. File paths refer to the expected locations once exported from the PDF.
+
+| # | Description | Source (Thesis) | Suggested README placement |
+|---|-------------|-----------------|---------------------------|
+| 1 | **Representative disease samples** — banana (9 classes) and groundnut (5 classes) side by side | Figure 3.1 | After "Datasets" section header |
+| 2 | **Three-stage instruction generation pipeline diagram** — full flowchart showing LLaVA-13B → Stage 1 → Mistral → Stage 2 (Complex Q&A) → Stage 3 (Simple Q&A) | Figure 3.2 | After "Instruction Dataset Generation" section header |
+| 3 | **BananaInstruct example sample** — image + description + complex Q&A + simple Q&A for Yellow and Black Sigatoka | Figure 3.3 | After Stage 3 description |
+| 4 | **BananaVLM LoRA epoch-wise accuracy chart** — in-domain vs. OOD, classification vs. identification across epochs 3, 5, 7 | Figure 5.1 | At start of "Epoch-wise Performance" under BananaVLM Results |
+| 5 | **GroundnutVLM LoRA epoch-wise accuracy chart** — same layout as above | Figure 5.2 | At start of "Epoch-wise Performance" under GroundnutVLM Results |
+| 6 | **BananaVLM DoRA epoch-wise accuracy chart** — showing classification degradation | Figure 5.3 | Under "LoRA vs DoRA Analysis" |
+| 7 | **GroundnutVLM DoRA epoch-wise accuracy chart** — showing classification saturation | Figure 5.4 | Under "LoRA vs DoRA Analysis" |
+
+To export these figures: open the thesis PDF, navigate to each figure page, and save as PNG at ≥ 150 DPI. Place them in the `images/` directory and replace each `📷 [Figure to add: ...]` marker in this README with standard Markdown image syntax:
+
+```markdown
+![Figure description](images/figure_name.png)
+```
+
+---
+
+## References
 
 - [LLaVA Official Repository](https://github.com/haotian-liu/LLaVA)
 - [Ollama](https://ollama.com/)
-- [Multi-crop Disease Dataset](https://data.mendeley.com/datasets/6243z8r6t6/1)
-
-
-
+- [Multi-Crop Disease Dataset (Mendeley)](https://data.mendeley.com/datasets/6243z8r6t6/1)
+- Liu et al. (2023). Visual Instruction Tuning. *NeurIPS.*
+- Liu et al. (2024). Improved Baselines with Visual Instruction Tuning. *CVPR.*
+- Hu et al. (2022). LoRA: Low-Rank Adaptation of Large Language Models. *ICLR.*
+- Liu et al. (2024). DoRA: Weight-Decomposed Low-Rank Adaptation. *arXiv:2402.09353.*
+- Liu et al. (2023). G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment. *EMNLP.*
+- Rajbhandari et al. (2020). ZeRO: Memory Optimizations Toward Training Trillion Parameter Models. *SC20.*
