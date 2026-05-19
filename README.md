@@ -249,7 +249,7 @@ A **10% held-out split (849 images)** is used for in-domain evaluation. The out-
 
 The instruction generation pipeline transforms image-only crop disease datasets into rich multimodal instruction-tuning datasets. The pipeline consists of **three stages**, each targeting a different aspect of agricultural language supervision.
 
-> 📷 **[Figure to add: Three-stage instruction generation pipeline diagram — Figure 3.2 from thesis]**
+![Three-stage instruction generation pipeline](slide1.png)
 
 ---
 
