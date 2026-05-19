@@ -140,7 +140,7 @@ The banana disease images are derived from the **Multi-Crop Disease Dataset** (M
 - **Original dataset:** https://data.mendeley.com/datasets/6243z8r6t6/1  
 - **Preprocessed banana subset:** https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
 <p align="center">
-  <img src="dataset_overview.pdf" width="700"/>
+  <img src="dataset_overview-1.png" width="700"/>
 </p>
 Download and extract inside `BananaVLM/`. Expected structure:
 
@@ -181,7 +181,7 @@ The groundnut disease dataset contains four disease classes and one healthy clas
 - **Dataset:** https://drive.google.com/drive/folders/1yyeKwa_3Z_khbMaWFnIvkvNO2b6vERi4?usp=sharing
 - **Out-of-domain test set:** [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
 <p align="center">
-  <img src="sample-images.pdf" width="700"/>
+  <img src="sample-images-1.png" width="700"/>
 </p>
 Download and extract inside `GroundnutVLM/`. Expected structure:
 
