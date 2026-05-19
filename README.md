@@ -530,7 +530,10 @@ Evaluation uses **substring matching** between predicted text and ground truth l
 
 ### Epoch-wise Performance (LoRA)
 
-> 📷 **[Figure to add: BananaVLM LoRA epoch-wise accuracy chart — Figure 5.1 from thesis]**
+<p align="center">
+  <img src="dora_epoch_banana.png" width="700"/>
+</p>
+
 
 | Epoch   | In-Domain Classification (%) | Out-of-Domain Classification (%) | In-Domain Identification (%) | Out-of-Domain Identification (%) |
 |---------|:----------------------------:|:--------------------------------:|:----------------------------:|:--------------------------------:|
@@ -641,7 +644,9 @@ On the in-domain benchmark, BananaVLM outperforms all open-source and closed-sou
 
 ### Epoch-wise Performance (LoRA)
 
-> 📷 **[Figure to add: GroundnutVLM LoRA epoch-wise accuracy chart — Figure 5.2 from thesis]**
+<p align="center">
+  <img src="lora_epoch_groundnut.png" width="700"/>
+</p>
 
 | Epoch   | ID — In-Domain | ID — OOD  | Cls — In-Domain | Cls — OOD  |
 |---------|:--------------:|:---------:|:---------------:|:----------:|
@@ -735,8 +740,12 @@ GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identifica
 
 ## LoRA vs DoRA Analysis
 
-> 📷 **[Figure to add: BananaVLM DoRA epoch-wise accuracy chart — Figure 5.3 from thesis]**
-> 📷 **[Figure to add: GroundnutVLM DoRA epoch-wise accuracy chart — Figure 5.4 from thesis]**
+<p align="center">
+  <img src="dora_plot_bananavlm.png" width="700"/>
+</p>
+<p align="center">
+  <img src="dora_plot_groundnutvlm.png" width="700"/>
+</p>
 
 Both PEFT variants were trained with identical hyperparameters (rank 64, alpha 16) for direct comparison.
 
