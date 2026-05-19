@@ -176,7 +176,7 @@ The dataset exhibits moderate class imbalance, with Yellow & Black Sigatoka bein
 
 The groundnut disease dataset contains four disease classes and one healthy class collected under real-world agricultural conditions.
 
-- **Dataset:** https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing
+- **Dataset:** https://drive.google.com/drive/folders/1yyeKwa_3Z_khbMaWFnIvkvNO2b6vERi4?usp=sharing
 - **Out-of-domain test set:** [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
 
 Download and extract inside `GroundnutVLM/`. Expected structure:
