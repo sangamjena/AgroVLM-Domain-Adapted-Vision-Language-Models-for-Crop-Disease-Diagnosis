@@ -65,30 +65,25 @@ Vision–language models (VLMs) provide a promising alternative by combining vis
 ```
 agro-vlm
 │
-├── BananaVLM
-│   ├── BananaInstruct
-│   │   ├── attribute.zip
-│   │   ├── external_knowledge.zip
-│   │   ├── data_generation.py
-│   │   └── data_format_converter.py
-│   ├── dataset
-│   │   ├── banana.zip
-│   │   └── readme.md
-│   └── images
+├── Attribute/
+├── BananaInstruct/
+├── Dora Evaluation/
+├── External Knowledge/
+├── GroundnutInstruct/
+├── Qualitative Evaluation/
+├── Quantitative Evaluation/
 │
-├── GroundnutVLM
-│   ├── GroundnutInstruct
-│   │   ├── attribute.zip
-│   │   ├── external_knowledge.zip
-│   │   ├── data_generation.py
-│   │   └── data_format_converter.py
-│   ├── dataset
-│   │   ├── groundnut.zip
-│   │   └── readme.md
-│   └── images
-│
-├── .gitignore
-├── LICENSE
+├── data_format_converter.py
+├── data_generation.py
+├── dataset_overview.pdf
+├── dataset_overview-1.png
+├── dora_plot_bananavlm.png
+├── dora_plot_groundnut.png
+├── lora_epoch_banana.png
+├── lora_epoch_groundnut.png
+├── sample-images.pdf
+├── sample-images-1.png
+├── Slide1.jpg
 ├── requirements.txt
 └── README.md
 ```
