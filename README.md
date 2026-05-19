@@ -156,19 +156,15 @@ banana_images
 └── yellow_and_black_sigatoka
 ```
 
-**BananaVLM Dataset Statistics:**
+**BananaVLM Dataset Statistics**
 
-| Disease Class           | Images |
-|-------------------------|--------|
-| Bract Mosaic Virus      | 399    |
-| Cordana                 | 558    |
-| Moko                    | 445    |
-| Panama                  | 1,117  |
-| Pestalotiopsis          | 573    |
-| Sigatoka                | 1,368  |
-| Yellow & Black Sigatoka | 2,791  |
-| Healthy                 | 1,079  |
-| **Total**               | **8,270** |
+| Disease / Condition | # Images | Disease / Condition | # Images |
+|---------------------|----------:|---------------------|----------:|
+| Bract Mosaic Virus  | 399       | Sigatoka            | 1,368     |
+| Cordana             | 558       | Yellow Band Sigatoka | 2,791   |
+| Insect Pest         | 688       | Pestalotiopsis      | 573       |
+| Moko                | 445       | Healthy             | 1,079     |
+| Panama              | 1,117     | **Total**           | **9,018** |
 
 The dataset exhibits moderate class imbalance, with Yellow & Black Sigatoka being the most represented class and Bract Mosaic Virus the least. A **10% held-out split (905 images)** is reserved for in-domain evaluation.
 
@@ -631,9 +627,7 @@ The most challenging OOD class is **Banana Insect Pest** (F1: 0.40, recall: 0.25
 | Gemini 2.5 Flash         | 91.22            | 40.87             | 93.36      | 14.76       |
 | Gemini 2.5 Pro           | 93.22            | 42.42             | 95.01      | 20.09       |
 | Gemini 3 Flash Preview   | 93.90            | 40.08             | 96.44      | 23.90       |
-| Gemini 3 Pro             | 94.90            | 41.79             | —          | —           |
 | Gemini 3.1 Flash Lite    | 92.90            | 42.28             | 98.10      | 13.85       |
-| Gemini 3.1 Pro           | 92.90            | 42.28             | —          | —           |
 | **BananaVLM (Ours)**     | **96.90**        | **92.21**         | **98.38**  | **83.28**   |
 
 On the in-domain benchmark, BananaVLM outperforms all open-source and closed-source baselines by a wide margin on classification. The best closed-source model (Gemini 2.5 Pro) reaches 42.42% — BananaVLM surpasses it by **+49.8 percentage points** in-domain and **+63.3 pp** OOD.
@@ -852,27 +846,6 @@ AgroVLM demonstrates that **lightweight, targeted domain adaptation through auto
 - **Continual learning:** A continual learning framework would allow incremental updates as new disease variants emerge without full retraining.
 - **Field deployment:** Integration into a mobile application with real-time inference, GPS-tagged disease reporting, and agronomist feedback loops.
 
----
-
-## Figures to Add
-
-The following figures from the thesis report should be added to this README. File paths refer to the expected locations once exported from the PDF.
-
-| # | Description | Source (Thesis) | Suggested README placement |
-|---|-------------|-----------------|---------------------------|
-| 1 | **Representative disease samples** — banana (9 classes) and groundnut (5 classes) side by side | Figure 3.1 | After "Datasets" section header |
-| 2 | **Three-stage instruction generation pipeline diagram** — full flowchart showing LLaVA-13B → Stage 1 → Mistral → Stage 2 (Complex Q&A) → Stage 3 (Simple Q&A) | Figure 3.2 | After "Instruction Dataset Generation" section header |
-| 3 | **BananaInstruct example sample** — image + description + complex Q&A + simple Q&A for Yellow and Black Sigatoka | Figure 3.3 | After Stage 3 description |
-| 4 | **BananaVLM LoRA epoch-wise accuracy chart** — in-domain vs. OOD, classification vs. identification across epochs 3, 5, 7 | Figure 5.1 | At start of "Epoch-wise Performance" under BananaVLM Results |
-| 5 | **GroundnutVLM LoRA epoch-wise accuracy chart** — same layout as above | Figure 5.2 | At start of "Epoch-wise Performance" under GroundnutVLM Results |
-| 6 | **BananaVLM DoRA epoch-wise accuracy chart** — showing classification degradation | Figure 5.3 | Under "LoRA vs DoRA Analysis" |
-| 7 | **GroundnutVLM DoRA epoch-wise accuracy chart** — showing classification saturation | Figure 5.4 | Under "LoRA vs DoRA Analysis" |
-
-To export these figures: open the thesis PDF, navigate to each figure page, and save as PNG at ≥ 150 DPI. Place them in the `images/` directory and replace each `📷 [Figure to add: ...]` marker in this README with standard Markdown image syntax:
-
-```markdown
-![Figure description](images/figure_name.png)
-```
 
 ---
 
