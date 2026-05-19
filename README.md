@@ -531,7 +531,7 @@ Evaluation uses **substring matching** between predicted text and ground truth l
 ### Epoch-wise Performance (LoRA)
 
 <p align="center">
-  <img src="dora_epoch_banana.png" width="700"/>
+  <img src="lora_epoch_banana.png" width="700"/>
 </p>
 
 
@@ -744,7 +744,7 @@ GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identifica
   <img src="dora_plot_bananavlm.png" width="700"/>
 </p>
 <p align="center">
-  <img src="dora_plot_groundnutvlm.png" width="700"/>
+  <img src="dora_plot_groundnut.png" width="700"/>
 </p>
 
 Both PEFT variants were trained with identical hyperparameters (rank 64, alpha 16) for direct comparison.
