@@ -512,7 +512,8 @@ LoRA weights will be saved in `checkpoints/`.
 
 ## Evaluation
 
-Evaluation is performed on a **10% held-out in-domain test split** and an **independent out-of-domain dataset** not seen during training. Two tasks are evaluated:
+Evaluation is performed on a **10% held-out in-domain test split** and an **independent out-of-domain dataset** not seen during training One can find the following dataset from the following : https://drive.google.com/file/d/1GouAfOa2071qS9x_VPSVr_RvLZuSXh_F/view?usp=sharing
+. Two tasks are evaluated:
 
 - **Identification** — Binary classification: Healthy vs. Diseased. Metrics: accuracy, precision, recall, F1.
 - **Classification** — Fine-grained disease-class prediction. Metrics: per-class precision, recall, F1, overall accuracy.
