@@ -52,9 +52,9 @@ The challenge is not merely economic. As global population is projected to reach
 
 The consequences of delayed or incorrect diagnosis cascade quickly. A fungal infection identified a week late can spread to an entire field. A viral disease misidentified as a nutrient deficiency receives the wrong treatment. A farmer who cannot name the disease cannot source the correct fungicide, cannot follow quarantine protocols, and cannot report an outbreak to regional authorities. Each missed diagnosis is a compounding failure — agronomic, economic, and systemic.
 
-> 🌾 **Banana** is the world's most consumed fruit and a dietary staple for over 400 million people, yet it is threatened by at least eight major diseases — including Fusarium wilt (Panama disease), Black Sigatoka, and Banana Bunchy Top Virus — many of which are visually similar in early stages and require expert differentiation.
+> **Banana** is the world's most consumed fruit and a dietary staple for over 400 million people, yet it is threatened by at least eight major diseases — including Fusarium wilt (Panama disease), Black Sigatoka, and Banana Bunchy Top Virus — many of which are visually similar in early stages and require expert differentiation.
 
-> 🥜 **Groundnut** is a critical source of protein and income across Africa and South Asia, with major diseases like early leaf spot, late leaf spot, and rust causing yield losses of up to 70% in severe outbreaks if not caught early.
+> **Groundnut** is a critical source of protein and income across Africa and South Asia, with major diseases like early leaf spot, late leaf spot, and rust causing yield losses of up to 70% in severe outbreaks if not caught early.
 
 The global scale of this problem demands automated, accessible, and explainable diagnostic tools — ones that work in the field, on a mobile device, and without an agronomist standing next to the farmer.
 
@@ -122,9 +122,9 @@ Recent large VLMs such as GPT-4o, Gemini, LLaVA-34B, Qwen2.5-VL-72B, and Gemma3 
 
 | Approach | Disease Label | Symptom Description | Management Guidance | Out-of-Domain |
 |---|---|---|---|---|
-| CNN Classifier | ✅ Accurate | ❌ None | ❌ None | ⚠️ Fragile |
-| General-Purpose VLM (zero-shot) | ⚠️ Often wrong | ⚠️ Generic | ⚠️ Generic | ⚠️ Degraded |
-| **AgroVLM (ours)** | ✅ Accurate | ✅ Specific & grounded | ✅ Agronomically relevant | ✅ Robust |
+| CNN Classifier | Accurate | None | None | Fragile |
+| General-Purpose VLM (zero-shot) | Often wrong | Generic | Generic | Degraded |
+| **AgroVLM (ours)** | Accurate | Specific & grounded | Agronomically relevant | Robust |
 
 ---
 
