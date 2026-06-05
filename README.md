@@ -17,7 +17,11 @@ The results demonstrate that lightweight domain adaptation through automated ins
 
 ## Table of Contents
 
+- [Background](#background)
 - [Motivation](#motivation)
+- [Problem Statement](#problem-statement)
+- [Limitations of Existing Approaches](#limitations-of-existing-approaches)
+- [Proposed Approach — AgroVLM](#proposed-approach--agrovlm)
 - [Contributions](#contributions)
 - [Repository Structure](#repository-structure)
 - [Project Pipeline](#project-pipeline)
@@ -28,7 +32,7 @@ The results demonstrate that lightweight domain adaptation through automated ins
 - [Training Methodology](#training-methodology)
 - [Training Configuration](#training-configuration)
 - [Run Training](#run-training)
-- [Evaluation](#evaluation)
+- [Evaluation Scripts](#evaluation-scripts)
 - [Results — BananaVLM](#results--bananavlm)
 - [Results — GroundnutVLM](#results--groundnutvlm)
 - [LoRA vs DoRA Analysis](#lora-vs-dora-analysis)
@@ -36,18 +40,105 @@ The results demonstrate that lightweight domain adaptation through automated ins
 - [Human Expert Evaluation](#human-expert-evaluation)
 - [Conclusion](#conclusion)
 - [Limitations and Future Work](#limitations-and-future-work)
-- [Figures to Add](#figures-to-add)
 - [References](#references)
+
+---
+
+## Background
+
+Agriculture underpins the food security and livelihoods of billions of people worldwide, yet it remains acutely vulnerable to crop diseases. The Food and Agriculture Organization (FAO) estimates that plant diseases, pests, and pathogens are responsible for **20–40% of global crop losses** every year — a staggering toll that disproportionately impacts smallholder farmers and developing economies with the fewest resources to respond.
+
+The challenge is not merely economic. As global population is projected to reach nearly 10 billion by 2050, sustaining sufficient agricultural output will require dramatically reducing these preventable losses. Yet the tools available to farmers in the field remain fundamentally unchanged: either wait for a trained agronomist to inspect the plant in person, or rely on experience and intuition. In large parts of sub-Saharan Africa, South Asia, and Southeast Asia — where banana and groundnut are critical staple and cash crops — there is roughly **one agricultural extension officer for every 1,000–3,000 farming households**. Timely expert diagnosis is simply not available at scale.
+
+The consequences of delayed or incorrect diagnosis cascade quickly. A fungal infection identified a week late can spread to an entire field. A viral disease misidentified as a nutrient deficiency receives the wrong treatment. A farmer who cannot name the disease cannot source the correct fungicide, cannot follow quarantine protocols, and cannot report an outbreak to regional authorities. Each missed diagnosis is a compounding failure — agronomic, economic, and systemic.
+
+>  **Banana** is the world's most consumed fruit and a dietary staple for over 400 million people, yet it is threatened by at least eight major diseases — including Fusarium wilt (Panama disease), Black Sigatoka, and Banana Bunchy Top Virus — many of which are visually similar in early stages and require expert differentiation.
+
+>  **Groundnut** is a critical source of protein and income across Africa and South Asia, with major diseases like early leaf spot, late leaf spot, and rust causing yield losses of up to 70% in severe outbreaks if not caught early.
+
+The global scale of this problem demands automated, accessible, and explainable diagnostic tools — ones that work in the field, on a mobile device, and without an agronomist standing next to the farmer.
 
 ---
 
 ## Motivation
 
-Agriculture is essential for global food security, yet crop diseases continue to cause major yield losses every year, particularly in developing regions with limited access to agronomic expertise. Early and accurate disease diagnosis is therefore critical for reducing economic loss and supporting sustainable farming practices.
+Automated plant disease diagnosis is not a new idea. Computer vision has been applied to this problem for over a decade, and CNN-based classifiers trained on curated datasets like PlantVillage have achieved impressive accuracy numbers in controlled settings. But controlled accuracy and field utility are not the same thing.
 
-Traditional diagnosis relies on visual inspection by trained agronomists — a process that is expensive, geographically constrained, and difficult to scale. Deep learning-based approaches have shown strong potential for automated diagnosis, but most existing systems are classification-only models that provide disease labels without meaningful explanations or management guidance.
+Most deployed or published systems share a fundamental limitation: **they are pure classifiers**. Given an image, they output a label. They do not explain *why* they made that prediction, describe the visual symptoms they observed, discuss likely disease progression, or suggest a management strategy. A farmer who receives the output `"Panama Disease"` with no further context is not significantly better equipped than before — they still need an agronomist to translate that label into action.
 
-Vision–language models (VLMs) provide a promising alternative by combining visual understanding with natural language generation. However, general-purpose VLMs trained on internet-scale data are poorly adapted to the fine-grained visual patterns required for agricultural disease diagnosis.
+This gap between classification accuracy and agronomic utility is the core motivation for this work. What farmers, extension officers, and crop diagnosticians actually need is not just a label — they need a *diagnostic response*: a description of what the model sees, a justification for the diagnosis, and practical guidance on what to do next.
+
+Vision–language models (VLMs) are uniquely positioned to bridge this gap. By combining a visual encoder with a large language model backbone, VLMs can generate free-form natural language responses grounded in image content — responses that can describe symptoms, explain reasoning, and recommend management actions in plain language. This is precisely the form of output that has real utility in an agricultural advisory context.
+
+However, the general-purpose VLMs available today — whether open-source models like LLaVA, Qwen-VL, and Gemma, or frontier closed-source systems like GPT-4o and Gemini — are trained on internet-scale data that contains almost no specialised agricultural pathology content. They can describe a plant in broad terms, but they cannot reliably identify fine-grained disease classes, distinguish visually similar conditions, or produce the kind of confident, specific, agronomically grounded response that a real diagnostic tool requires. The domain gap is simply too large for zero-shot generalisation to close.
+
+**The motivation for AgroVLM is therefore twofold:** to bring the *format* of VLM responses (natural language, explanatory, actionable) to a domain where it is acutely needed, and to close the domain gap through targeted fine-tuning so that the model's outputs are accurate enough to be trusted.
+
+---
+
+## Problem Statement
+
+> **Can a compact, open-source vision–language model be domain-adapted to perform accurate, explainable crop disease diagnosis — surpassing both unimodal classifiers in utility and general-purpose VLMs in accuracy — using only automated instruction tuning without manual annotation?**
+
+More concretely, this work addresses the following requirements:
+
+**1. Fine-grained visual discrimination.** Crop disease diagnosis requires distinguishing between classes that are visually very similar — for example, early leaf spot versus late leaf spot in groundnut, or Sigatoka versus Black Sigatoka in banana. The model must be able to make these distinctions reliably, not just identify broad categories.
+
+**2. Explainable, language-grounded output.** The diagnostic output must go beyond a class label. It must describe the visible symptoms in the image, ground the diagnosis in those observations, and communicate useful information about disease progression and management — in natural language that a non-expert can act on.
+
+**3. Out-of-domain generalisation.** A model that works only on images from the same distribution as its training data has limited practical value. The model must generalise to images captured under different lighting, at different growth stages, with different camera hardware, and from geographically distinct populations of the same disease.
+
+**4. Scalability without expert annotation.** Manual annotation of agricultural datasets is expensive and requires rare domain expertise. A practical pipeline must be able to generate high-quality instruction-tuning data at scale from image datasets alone, using automation rather than human labelling.
+
+**5. Efficiency.** The model must be trainable and deployable on accessible hardware — a single GPU rather than a multi-node cluster — to lower the barrier to replication and extension to new crops.
+
+---
+
+## Limitations of Existing Approaches
+
+### Unimodal Classifiers (CNNs, ViTs)
+
+The dominant paradigm for automated crop disease diagnosis has been supervised CNN or Vision Transformer classification on labelled image datasets. While these models can achieve high top-1 accuracy on held-out test sets, they have several structural limitations for real-world deployment:
+
+- **Label-only outputs.** A classifier outputs a disease label and a confidence score. It cannot describe symptoms, explain its reasoning, recommend treatment, or answer follow-up questions. The diagnostic utility is therefore fundamentally limited — the label is a starting point, not an answer.
+
+- **Closed vocabulary.** A classifier trained on a fixed set of classes cannot handle novel diseases, ambiguous presentations, or multi-label scenarios (e.g., a plant with both a fungal infection and a nutrient deficiency). It will always force the image into one of its training classes, even when none fits.
+
+- **No grounding in visual evidence.** There is no mechanism for a standard classifier to communicate *which* visual features drove its prediction. Explainability methods like Grad-CAM produce heatmaps, but these are post-hoc approximations, not natural-language explanations that can be communicated to a farmer.
+
+- **Poor distribution shift robustness.** CNNs trained on curated datasets notoriously degrade under distribution shift — changes in lighting, camera angle, growth stage, or geographic region. Without explicit augmentation or domain randomisation, generalisation to truly out-of-distribution images is fragile.
+
+### General-Purpose Vision–Language Models (Zero-Shot)
+
+Recent large VLMs such as GPT-4o, Gemini, LLaVA-34B, Qwen2.5-VL-72B, and Gemma3 represent a significant step forward in multimodal understanding. They can describe images, answer questions, and generate natural language — but they consistently underperform on specialised agricultural tasks for the following reasons:
+
+- **Severe domain gap.** Internet-scale training data contains very little content on crop pathology, and what exists is rarely at the level of granularity required for fine-grained disease classification. These models can identify "a sick-looking plant" but rarely distinguish between, say, Cordana and Pestalotiopsis on a banana leaf.
+
+- **Inconsistent label grounding.** General-purpose VLMs frequently produce responses that describe symptoms accurately but assign the wrong disease name, or produce correct labels with incorrect symptom descriptions. The connection between visual evidence and label is not reliably grounded.
+
+- **No agronomic knowledge integration.** Standard VLMs do not have systematically integrated knowledge of disease progression, management protocols, fungicide recommendations, or environmental risk factors. Their management advice is generic and often inaccurate.
+
+- **Scale does not compensate for domain specificity.** Our experiments show that even the largest tested baseline — Qwen2.5-VL-72B — achieves only 8.95% classification accuracy on the banana in-domain test set and 17.05% out-of-domain. A 10× smaller domain-adapted model achieves 92.21% and 83.28% respectively. **Parameter count is not a substitute for domain knowledge.**
+
+| Approach | Disease Label | Symptom Description | Management Guidance | Out-of-Domain |
+|---|---|---|---|---|
+| CNN Classifier | Accurate | None | None | Fragile |
+| General-Purpose VLM (zero-shot) | Often wrong | Generic | Generic | Degraded |
+| **AgroVLM (ours)** | Accurate | Specific & grounded | Agronomically relevant | Robust |
+
+---
+
+## Proposed Approach — AgroVLM
+
+AgroVLM addresses all of the above limitations through three integrated design choices:
+
+**1. Vision–Language model foundation.** By building on LLaVA-v1.5-7B — which combines a CLIP ViT-L/14 vision encoder with a Vicuna-7B language model backbone — AgroVLM inherits strong visual understanding and fluent language generation. The model can describe what it sees, not just classify it.
+
+**2. Automated domain-specific instruction tuning.** Rather than relying on manual annotation or zero-shot prompting, AgroVLM is trained on a rich instruction dataset generated automatically from raw disease image collections. The three-stage pipeline produces approximately 80,000 Q&A pairs for banana and 75,000 for groundnut — covering symptom description, multi-turn agronomic reasoning, and classification label grounding — without any human labelling of training data.
+
+**3. Parameter-efficient LoRA fine-tuning.** Full fine-tuning of a 7B model is impractical on a single GPU. LoRA adaptation introduces fewer than 1% additional trainable parameters while achieving convergence that full fine-tuning cannot on this task. Crucially, both the LoRA weights on the language model and the MLP projection layer are trained, allowing the visual-to-language alignment to adapt alongside the language generation.
+
+The result is a model that is simultaneously more *accurate* than any tested baseline (open-source or proprietary) on disease classification, and more *useful* in the sense that matters agronomically — providing grounded symptom descriptions and actionable management guidance that human experts consistently prefer by a margin of ~98.6%.
 
 ---
 
@@ -65,25 +156,33 @@ Vision–language models (VLMs) provide a promising alternative by combining vis
 ```
 agro-vlm
 │
-├── Attribute/
-├── BananaInstruct/
-├── Dora Evaluation/
-├── External Knowledge/
-├── GroundnutInstruct/
-├── Qualitative Evaluation/
-├── Quantitative Evaluation/
+├── Attribute/                        # Per-disease attribute text files for instruction generation
+├── BananaInstruct/                   # Generated instruction dataset for BananaVLM
+├── Dora Evaluation/                  # DoRA model evaluation results and logs
+├── External Knowledge/               # Curated agronomic knowledge used in Stage 2 generation
+├── GroundnutInstruct/                # Generated instruction dataset for GroundnutVLM
+├── Qualitative Evaluation/           # G-Eval judge outputs and human expert comparison files
+├── Quantitative Evaluation/          # Accuracy, F1, and per-class classification reports
 │
-├── data_format_converter.py
-├── data_generation.py
-├── dataset_overview.pdf
+├── classification.py                 # LoRA model — fine-grained disease classification evaluation
+├── identification.py                 # LoRA model — binary healthy/diseased identification evaluation
+├── dora_classification.py            # DoRA model — fine-grained disease classification evaluation
+├── dora_identification.py            # DoRA model — binary healthy/diseased identification evaluation
+├── open_source_model_compare.py      # Zero-shot evaluation of open-source VLM baselines via Ollama
+├── qualitative_eval.py               # Generates paired base vs. fine-tuned outputs for qualitative review
+├── geval.py                          # G-Eval: multi-judge LLM scoring across 4 agronomic dimensions
+│
+├── data_format_converter.py          # Converts JSONL instruction data to LLaVA training JSON format
+├── data_generation.py                # Three-stage instruction dataset generation pipeline
+├── dataset_overview.pdf              # Visual overview of dataset composition
 ├── dataset_overview-1.png
-├── dora_plot_bananavlm.png
-├── dora_plot_groundnut.png
-├── lora_epoch_banana.png
-├── lora_epoch_groundnut.png
+├── dora_plot_bananavlm.png           # LoRA vs DoRA performance curve — BananaVLM
+├── dora_plot_groundnut.png           # LoRA vs DoRA performance curve — GroundnutVLM
+├── lora_epoch_banana.png             # Epoch-wise accuracy curve — BananaVLM
+├── lora_epoch_groundnut.png          # Epoch-wise accuracy curve — GroundnutVLM
 ├── sample-images.pdf
-├── sample-images-1.png
-├── Slide1.jpg
+├── sample-images-1.png               # Sample crop disease images from the dataset
+├── Slide1.jpg                        # Three-stage instruction generation pipeline diagram
 ├── requirements.txt
 └── README.md
 ```
@@ -134,9 +233,11 @@ The banana disease images are derived from the **Multi-Crop Disease Dataset** (M
 
 - **Original dataset:** https://data.mendeley.com/datasets/6243z8r6t6/1  
 - **Preprocessed banana subset:** https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
+
 <p align="center">
   <img src="dataset_overview-1.png" width="700"/>
 </p>
+
 Download and extract inside `BananaVLM/`. Expected structure:
 
 ```
@@ -171,9 +272,11 @@ The groundnut disease dataset contains four disease classes and one healthy clas
 
 - **Dataset:** https://drive.google.com/drive/folders/1yyeKwa_3Z_khbMaWFnIvkvNO2b6vERi4?usp=sharing
 - **Out-of-domain test set:** [Kaggle — Groundnut Plant Leaf Data](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data)
+
 <p align="center">
   <img src="sample-images-1.png" width="700"/>
 </p>
+
 Download and extract inside `GroundnutVLM/`. Expected structure:
 
 ```
@@ -505,15 +608,102 @@ LoRA weights will be saved in `checkpoints/`.
 
 ---
 
-## Evaluation
+## Evaluation Scripts
 
-Evaluation is performed on a **10% held-out in-domain test split** and an **independent out-of-domain dataset** not seen during training . One can find the following dataset from the following : https://drive.google.com/file/d/1GouAfOa2071qS9x_VPSVr_RvLZuSXh_F/view?usp=sharing
-. Two tasks are evaluated:
+The repository provides six evaluation scripts covering all model variants, tasks, and baseline comparisons. Before running any script, update the `MODEL_PATH`, `MODEL_BASE`, and `DATASET_DIR` variables to match your local paths.
 
-- **Identification** — Binary classification: Healthy vs. Diseased. Metrics: accuracy, precision, recall, F1.
-- **Classification** — Fine-grained disease-class prediction. Metrics: per-class precision, recall, F1, overall accuracy.
+---
 
-Evaluation uses **substring matching** between predicted text and ground truth labels.
+### `classification.py` — LoRA Model: Fine-Grained Disease Classification
+
+Evaluates a **LoRA fine-tuned AgroVLM** (BananaVLM or GroundnutVLM) on the **disease classification task** — predicting the specific disease class from an image.
+
+The model is prompted with the list of valid class names and asked to return one label. Predictions are matched against ground truth using substring matching and fuzzy overlap (SequenceMatcher), which tolerates minor wording variations in generated outputs. Outputs a per-class scikit-learn classification report (precision, recall, F1), confusion matrix, AUC score, and latency/throughput metrics. Results are saved to a timestamped CSV in `./crop_reports/`.
+
+```bash
+# Edit MODEL_PATH and DATASET_DIR, then run:
+python classification.py
+```
+
+---
+
+### `identification.py` — LoRA Model: Binary Disease Identification
+
+Evaluates a **LoRA fine-tuned AgroVLM** on the **binary identification task** — determining whether a plant is healthy or diseased.
+
+The model is given the prompt `"Is this crop diseased or not? Answer only yes or no."` and the response is mapped to `disease` (yes) or `healthy` (no). Computes accuracy, precision, recall, F1, and the full confusion matrix (TP/TN/FP/FN). Tracks per-image latency and GPU peak memory usage. Progress is checkpointed every 5 images to CSV.
+
+```bash
+# Edit MODEL_PATH and DATASET_DIR, then run:
+python identification.py
+```
+
+---
+
+### `dora_classification.py` — DoRA Model: Fine-Grained Disease Classification
+
+Equivalent to `classification.py` but for the **DoRA fine-tuned** model variant.
+
+Uses the lower-level LLaVA model builder API (`load_pretrained_model` + `PeftModel.from_pretrained`) instead of the higher-level `eval_model` wrapper, which is required because DoRA weights include a `non_lora_trainables.bin` that must be loaded separately before the PEFT adapter. The model is loaded once per crop and reused across all images in that crop's test set for efficiency.
+
+```bash
+# Edit MODEL_PATH and DATASET_DIR, then run:
+python dora_classification.py
+```
+
+---
+
+### `dora_identification.py` — DoRA Model: Binary Disease Identification
+
+Equivalent to `identification.py` but for the **DoRA fine-tuned** model variant.
+
+Also uses the low-level model builder with explicit `non_lora_trainables.bin` loading. Unlike the LoRA identification script, this version reloads the model from scratch for each individual image — a design choice from early-stage debugging that was preserved to isolate any per-image memory issues during DoRA experiments.
+
+```bash
+# Edit MODEL_PATH and DATASET_DIR, then run:
+python dora_identification.py
+```
+
+---
+
+### `open_source_model_compare.py` — Zero-Shot Baseline Evaluation via Ollama
+
+Evaluates **open-source VLM baselines** (e.g., LLaVA-7B/13B/34B, Qwen2.5-VL, Qwen3-VL, Gemma3, MiniCPM-V, Granite, BakLLaVA) on both tasks using the **Ollama API** for local inference.
+
+Images are base64-encoded and sent to `http://localhost:11434/api/generate`. For the identification task (`task="id"`), responses are parsed for yes/no. For the classification task (`task="cls"`), responses are matched against ground truth disease names using fuzzy matching (substring overlap + SequenceMatcher). Accuracy results are appended to `accuracy.txt` and per-image predictions are saved to `results/<model_name>_<task>_results.csv`.
+
+Requires [Ollama](https://ollama.com/) to be running locally with the target models pulled.
+
+```bash
+# Start Ollama and pull models first, then:
+python open_source_model_compare.py
+```
+
+---
+
+### `qualitative_eval.py` — Paired Output Generation for Qualitative Review
+
+Generates **side-by-side response pairs** from the base model and the LoRA fine-tuned model for 200 balanced samples drawn from the test set. Outputs a CSV (`banana_eval_results.csv`) and a Word document report (`banana_report.docx`) with the input image, ground truth label, and both models' free-form responses to the prompt `"see the image and tell me what type of disease, visible symptoms and possible solution?"`.
+
+The Word report is used directly as input for the human expert blind evaluation protocol — evaluators review pairs without knowing which response came from which model.
+
+```bash
+python qualitative_eval.py
+```
+
+---
+
+### `geval.py` — G-Eval: Multi-Judge LLM Scoring
+
+Implements the **G-Eval evaluation framework** to assess response quality across four agronomic dimensions using nine open-source LLM judges served via Ollama.
+
+For each image in the qualitative evaluation CSV, all nine judges independently score both the base model response and the AgroVLM response on a 0–5 scale across: disease identification, classification accuracy, visible symptoms, and management strategy. Each judge also declares an overall winner (A or B). Scores are averaged per judge and win rates are computed. Results are saved to `multi_llm_comparison_groundnut.csv` and a formatted text summary to `final_llm_results_groundnut.txt`.
+
+Requires all nine judge models to be available via the local Ollama instance.
+
+```bash
+python geval.py
+```
 
 ---
 
@@ -524,7 +714,6 @@ Evaluation uses **substring matching** between predicted text and ground truth l
 <p align="center">
   <img src="lora_epoch_banana.png" width="700"/>
 </p>
-
 
 | Epoch   | In-Domain Classification (%) | Out-of-Domain Classification (%) | In-Domain Identification (%) | Out-of-Domain Identification (%) |
 |---------|:----------------------------:|:--------------------------------:|:----------------------------:|:--------------------------------:|
@@ -721,7 +910,7 @@ Early Leaf Spot and Late Leaf Spot achieve **perfect precision, recall, and F1 (
 | Gemini 2.5 Pro           | **99.18**        | 24.38             | 97.10      | 41.60       |
 | Gemini 3 Flash Preview   | 98.35            | 17.95             | 96.90      | 26.40       |
 | Gemini 3.1 Flash Lite    | 97.76            | 24.38             | 96.80      | 23.40       |
-| **GroundnutVLM (Ours)**  | **99.18**        | **98.27**         | **97.10**  | **99.40**   |
+| **GroundnutVLM (Ours)**  | **99.18**        | **98.27**         | **97.10**  | **99.40%** |
 
 GroundnutVLM matches the best closed-source model (Gemini 2.5 Pro) on identification (both 99.18%) while achieving **4× higher classification accuracy** in-domain (98.27% vs. 24.38%) and exceeding the best OOD closed-source result by **+57.8 pp** (99.40% vs. 41.60%).
 
@@ -840,7 +1029,6 @@ AgroVLM demonstrates that **lightweight, targeted domain adaptation through auto
 - **Improving weak classes:** Bunchy Top Insect Pest (banana, F1=0.59) and Insect Pest OOD (F1=0.40) require targeted augmentation or few-shot adaptation strategies.
 - **Continual learning:** A continual learning framework would allow incremental updates as new disease variants emerge without full retraining.
 - **Field deployment:** Integration into a mobile application with real-time inference, GPS-tagged disease reporting, and agronomist feedback loops.
-
 
 ---
 
