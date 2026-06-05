@@ -52,9 +52,9 @@ The challenge is not merely economic. As global population is projected to reach
 
 The consequences of delayed or incorrect diagnosis cascade quickly. A fungal infection identified a week late can spread to an entire field. A viral disease misidentified as a nutrient deficiency receives the wrong treatment. A farmer who cannot name the disease cannot source the correct fungicide, cannot follow quarantine protocols, and cannot report an outbreak to regional authorities. Each missed diagnosis is a compounding failure — agronomic, economic, and systemic.
 
->  **Banana** is the world's most consumed fruit and a dietary staple for over 400 million people, yet it is threatened by at least eight major diseases — including Fusarium wilt (Panama disease), Black Sigatoka, and Banana Bunchy Top Virus — many of which are visually similar in early stages and require expert differentiation.
+> 🌾 **Banana** is the world's most consumed fruit and a dietary staple for over 400 million people, yet it is threatened by at least eight major diseases — including Fusarium wilt (Panama disease), Black Sigatoka, and Banana Bunchy Top Virus — many of which are visually similar in early stages and require expert differentiation.
 
->  **Groundnut** is a critical source of protein and income across Africa and South Asia, with major diseases like early leaf spot, late leaf spot, and rust causing yield losses of up to 70% in severe outbreaks if not caught early.
+> 🥜 **Groundnut** is a critical source of protein and income across Africa and South Asia, with major diseases like early leaf spot, late leaf spot, and rust causing yield losses of up to 70% in severe outbreaks if not caught early.
 
 The global scale of this problem demands automated, accessible, and explainable diagnostic tools — ones that work in the field, on a mobile device, and without an agronomist standing next to the farmer.
 
@@ -122,9 +122,9 @@ Recent large VLMs such as GPT-4o, Gemini, LLaVA-34B, Qwen2.5-VL-72B, and Gemma3 
 
 | Approach | Disease Label | Symptom Description | Management Guidance | Out-of-Domain |
 |---|---|---|---|---|
-| CNN Classifier | Accurate | None | None | Fragile |
-| General-Purpose VLM (zero-shot) | Often wrong | Generic | Generic | Degraded |
-| **AgroVLM (ours)** | Accurate | Specific & grounded | Agronomically relevant | Robust |
+| CNN Classifier | ✅ Accurate | ❌ None | ❌ None | ⚠️ Fragile |
+| General-Purpose VLM (zero-shot) | ⚠️ Often wrong | ⚠️ Generic | ⚠️ Generic | ⚠️ Degraded |
+| **AgroVLM (ours)** | ✅ Accurate | ✅ Specific & grounded | ✅ Agronomically relevant | ✅ Robust |
 
 ---
 
@@ -232,7 +232,8 @@ pip install -r requirements.txt
 The banana disease images are derived from the **Multi-Crop Disease Dataset** (Mendeley Data).
 
 - **Original dataset:** https://data.mendeley.com/datasets/6243z8r6t6/1  
-- **Preprocessed banana subset:** https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
+- **Preprocessed banana subset (training + in-domain test):** https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing
+- **Out-of-domain test set (743 images, independent source):** https://drive.google.com/file/d/1GouAfOa2071qS9x_VPSVr_RvLZuSXh_F/view?usp=sharing
 
 <p align="center">
   <img src="dataset_overview-1.png" width="700"/>
@@ -611,6 +612,15 @@ LoRA weights will be saved in `checkpoints/`.
 ## Evaluation Scripts
 
 The repository provides six evaluation scripts covering all model variants, tasks, and baseline comparisons. Before running any script, update the `MODEL_PATH`, `MODEL_BASE`, and `DATASET_DIR` variables to match your local paths.
+
+**Test datasets:**
+
+| Crop | Split | Source | Link |
+|------|-------|--------|------|
+| Banana | In-domain (797 images) | 10% held-out from training set | [Google Drive](https://drive.google.com/file/d/1AT8SL4yjpOBOxyyQB3CK-dSCJcssnRjv/view?usp=sharing) |
+| Banana | Out-of-domain (743 images) | Independent source, unseen during training | [Google Drive](https://drive.google.com/file/d/1GouAfOa2071qS9x_VPSVr_RvLZuSXh_F/view?usp=sharing) |
+| Groundnut | In-domain (849 images) | 10% held-out from training set | [Google Drive](https://drive.google.com/drive/folders/1yyeKwa_3Z_khbMaWFnIvkvNO2b6vERi4?usp=sharing) |
+| Groundnut | Out-of-domain (1,000 images) | Separate Kaggle dataset, unseen during training | [Kaggle](https://www.kaggle.com/datasets/warcoder/groundnut-plant-leaf-data) |
 
 ---
 
